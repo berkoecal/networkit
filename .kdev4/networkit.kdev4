@@ -1,7 +1,42 @@
+[Buildset]
+BuildItems=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x01\x00\x00\x00\x0b\x00\x00\x00\x00\x01\x00\x00\x00\x1a\x00h\x00y\x00p\x00e\x00r\x00b\x00o\x00l\x00i\x00c\x00i\x00t\x00y)
+
 [Defines And Includes][Compiler]
 Name=GCC
 Path=gcc
 Type=GCC
 
+[Launch]
+Launch Configurations=Launch Configuration 0
+
+[Launch][Launch Configuration 0]
+Configured Launch Modes=execute
+Configured Launchers=nativeAppLauncher
+Name=New Compiled Binary Launcher
+Type=Native Application
+
+[Launch][Launch Configuration 0][Data]
+Arguments=
+Debugger Shell=
+Dependencies=@Variant(\x00\x00\x00\t\x00\x00\x00\x00\x00)
+Dependency Action=Nothing
+Display Demangle Names=true
+Display Static Members=false
+EnvironmentGroup=
+Executable=file:///home/berk/projects/networkit/scripts/compile.sh
+External Terminal=konsole --noclose --workdir %workdir -e %exe
+GDB Path=
+Project Target=
+Remote GDB Config Script=
+Remote GDB Run Script=
+Remote GDB Shell Script=file:///home/berk/projects/networkit/scripts/compile.sh
+Start With=ApplicationOutput
+Use External Terminal=false
+Working Directory=file:///home/berk/projects/networkit
+isExecutable=true
+
 [Project]
 VersionControlSupport=kdevgit
+
+[SourceFileTemplates]
+LastUsedTemplate=/home/berk/.kde/share/apps/kdevfiletemplates/template_descriptions/cpp_basic.desktop
