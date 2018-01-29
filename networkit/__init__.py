@@ -45,6 +45,7 @@ from . import graphio
 from . import community
 from . import centrality
 from . import generators
+from . import hyperbolicity
 from . import structures
 from . import engineering
 from . import distance

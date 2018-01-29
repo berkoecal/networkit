@@ -17,6 +17,7 @@ APSP::APSP(const Graph& G) : Algorithm(), G(G) {}
 void APSP::run() {
 	std::vector<edgeweight> distanceVector(G.upperNodeIdBound(), 0.0);
 	distances.resize(G.upperNodeIdBound(), distanceVector);
+	eccentricity.resize(G.upperNodeIdBound(),0.0);
 	if (G.isWeighted()) {
 		G.parallelForNodes([&](node u){
 			Dijkstra dijk(G, u);
@@ -25,9 +26,13 @@ void APSP::run() {
 		});
 	} else {
 		G.parallelForNodes([&](node u){
-			BFS bfs(G, u);
+			BFS bfs(G, u, true, true);
 			bfs.run();
 			distances[u] = bfs.getDistances();
+			
+			auto sorted_nodes = bfs.getNodesSortedByDistance();
+			auto const& eccentricity_node = sorted_nodes.back();
+			eccentricity[u] = distances[u][eccentricity_node];
 		});
 	}
 	hasRun = true;

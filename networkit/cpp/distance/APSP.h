@@ -51,7 +51,15 @@ public:
 	 *
 	 */
 	edgeweight getDistance(node u, node v) const {if (!hasRun) throw std::runtime_error("Call run method first"); return distances[u][v];}
-
+	
+	/**
+	 * Returns eccentricity of a node u (= max_{v node of G} d(u,v)).
+	 * It is calculated during the BFS iteration.
+	 *
+	 */
+	
+	edgeweight getEccentricity(node u) const {if (!hasRun) throw std::runtime_error("Call run method first"); return eccentricity[u];}
+	
 	/**
 	* @return True if algorithm can run multi-threaded.
 	*/
@@ -62,6 +70,7 @@ protected:
 
 	const Graph& G;
 	std::vector<std::vector<edgeweight> > distances;
+	std::vector<edgeweight> eccentricity;
 };
 
 } /* namespace NetworKit */

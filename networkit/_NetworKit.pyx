@@ -644,7 +644,8 @@ cdef class Graph:
 
 	def addEdge(self, u, v, w=1.0):
 		""" Insert an undirected edge between the nodes `u` and `v`. If the graph is weighted you can optionally
-	 	set a weight for this edge. The default weight is 1.0.
+		set a weight for this edge. The default weight is 1.0.
+		Caution: It is not checked whether this edge already exists, thus it is possible to create multi-edges.
 
 	 	Parameters
 	 	----------
@@ -1266,7 +1267,7 @@ cdef class SSSP(Algorithm):
 
 	def getStack(self, moveOut=True):
 		""" DEPRECATED: Use getNodesSortedByDistance instead.
-		
+
 		Returns a vector of nodes ordered in increasing distance from the source.
 
 		For this functionality to be available, storeNodesSortedByDistance has to be set to true in the constructor.
@@ -1606,6 +1607,25 @@ cdef class APSP(Algorithm):
 			The distance from 'u' to 'v'.
 		"""
 		return (<_APSP*>(self._this)).getDistance(u, v)
+
+cdef extern from "cpp/hyperbolicity/Hyperbolicity.h":
+	cdef cppclass _Hyperbolicity "NetworKit::Hyperbolicity"(_Algorithm):
+		_Hyperbolicity(_Graph G) except +
+		int getHyperbolicity() except +
+
+cdef class Hyperbolicity(Algorithm):
+	""" Algorithm for computing the Hyperbolicity of a given graph """
+	cdef Graph _G
+
+	def __cinit__(self, Graph G):
+		self._G = G
+		self._this = new _Hyperbolicity(G._this)
+
+	def __dealloc__(self):
+		self._G = None
+
+	def getHyperbolicity(self):
+		return (<_Hyperbolicity*>(self._this)).getHyperbolicity()
 
 cdef extern from "cpp/distance/DynAPSP.h":
 	cdef cppclass _DynAPSP "NetworKit::DynAPSP"(_APSP):
@@ -5441,7 +5461,8 @@ cdef class DynConnectedComponents:
 		return self._this.getComponents()
 
 	def update(self, event):
-		""" Updates the connected components after an edge insertion or deletion.
+		""" Updates the connected components after an edge insertion or
+			deletion.
 
 			Parameters
 			----------
@@ -5451,7 +5472,108 @@ cdef class DynConnectedComponents:
 		self._this.update(_GraphEvent(event.type, event.u, event.v, event.w))
 
 	def updateBatch(self, batch):
-		""" Updates the connected components after a batch of edge insertions or deletions.
+		""" Updates the connected components after a batch of edge insertions or
+			deletions.
+
+			Parameters
+			----------
+			batch : vector[GraphEvent]
+				A vector that contains a batch of edge insertions or deletions.
+		"""
+		cdef vector[_GraphEvent] _batch
+		for event in batch:
+			_batch.push_back(_GraphEvent(event.type, event.u, event.v, event.w))
+		self._this.updateBatch(_batch)
+
+
+
+cdef extern from "cpp/components/DynWeaklyConnectedComponents.h":
+	cdef cppclass _DynWeaklyConnectedComponents "NetworKit::DynWeaklyConnectedComponents":
+		_DynWeaklyConnectedComponents(_Graph G) except +
+		void run() nogil except +
+		void update(_GraphEvent) except +
+		void updateBatch(vector[_GraphEvent]) except +
+		count numberOfComponents() except +
+		count componentOfNode(node query) except +
+		map[index, count] getComponentSizes() except +
+		vector[vector[node]] getComponents() except +
+
+cdef class DynWeaklyConnectedComponents:
+	""" Determines and updates the weakly connected components of a directed graph.
+
+		Parameters
+		----------
+		G : Graph
+			The graph.
+	"""
+	cdef _DynWeaklyConnectedComponents* _this
+	cdef Graph _G
+
+	def __cinit__(self, Graph G):
+		self._G = G
+		self._this = new _DynWeaklyConnectedComponents(G._this)
+
+	def __dealloc__(self):
+		del self._this
+
+	def run(self):
+		with nogil:
+			self._this.run()
+		return self
+
+	def numberOfComponents(self):
+		""" Returns the number of components.
+
+			Returns
+			count
+				The number of components.
+		"""
+		return self._this.numberOfComponents()
+
+	def componentOfNode(self, v):
+		""" Returns the the component in which node @a u is.
+
+			Parameters
+			----------
+			v : node
+				The node.
+		"""
+		return self._this.componentOfNode(v)
+
+	def getComponentSizes(self):
+		""" Returns the map from component to size.
+
+			Returns
+			map[index, count]
+			 	A map that maps each component to its size.
+		"""
+		return self._this.getComponentSizes()
+
+	def getComponents(self):
+		""" Returns all the components, each stored as (unordered) set of nodes.
+
+			Returns
+			vector[vector[node]]
+				A vector of vectors. Each inner vector contains all the nodes
+				inside the component.
+
+		"""
+		return self._this.getComponents()
+
+	def update(self, event):
+		""" Updates the connected components after an edge insertion or
+			deletion.
+
+			Parameters
+			----------
+			event : GraphEvent
+				The event that happened (edge deletion or insertion).
+		"""
+		self._this.update(_GraphEvent(event.type, event.u, event.v, event.w))
+
+	def updateBatch(self, batch):
+		""" Updates the connected components after a batch of edge insertions or
+			deletions.
 
 			Parameters
 			----------
@@ -6001,6 +6123,60 @@ cdef class TopCloseness:
 		return self._this.topkScoresList()
 
 
+
+cdef extern from "cpp/centrality/GroupCloseness.h":
+	cdef cppclass _GroupCloseness "NetworKit::GroupCloseness":
+		_GroupCloseness(_Graph G, count, count) except +
+		void run() except +
+		vector[node] groupMaxCloseness() except +
+		double computeFarness(vector[node], count) except +
+
+
+cdef class GroupCloseness:
+	"""
+	Finds the group of nodes with highest (group) closeness centrality. The algorithm is the one proposed in Bergamini et al., ALENEX 2018 and finds a solution that is a (1-1/e)-approximation of the optimum.
+	The worst-case running time of this approach is quadratic, but usually much faster in practice.
+
+	GroupCloseness(G, k=1, H=0)
+
+	Parameters
+	----------
+	G: An unweighted graph.
+	k: Size of the group.
+	H: If equal 0, simply runs the algorithm proposed in Bergamini et al.. If > 0, interrupts all BFSs after H iterations (suggested for very large networks).
+	"""
+	cdef _GroupCloseness* _this
+	cdef Graph _G
+
+	def __cinit__(self,  Graph G, k=1, H=0):
+		self._G = G
+		self._this = new _GroupCloseness(G._this, k, H)
+
+	def __dealloc__(self):
+		del self._this
+
+	def run(self):
+		""" Computes group with maximum closeness. """
+		self._this.run()
+		return self
+
+	""" Returns group with highest closeness.
+	Returns
+	-------
+	vector
+		The group of k nodes with highest closeness.
+	"""
+	def groupMaxCloseness(self):
+		return self._this.groupMaxCloseness()
+
+
+	""" Computes farness (i.e., inverse of the closeness) for a given group (stopping after H iterations if H > 0).
+	"""
+	def computeFarness(self, S, H=0):
+		return self._this.computeFarness(S, H)
+
+
+
 cdef extern from "cpp/centrality/DegreeCentrality.h":
 	cdef cppclass _DegreeCentrality "NetworKit::DegreeCentrality" (_Centrality):
 		_DegreeCentrality(_Graph, bool normalized, bool outdeg, bool ignoreSelfLoops) except +
@@ -6074,10 +6250,10 @@ cdef extern from "cpp/centrality/Closeness.h":
 
 cdef class Closeness(Centrality):
 	"""
-		Closeness(G, normalized=False, checkConnectedness=True)
+		Closeness(G, normalized=True, checkConnectedness=True)
 
-		Constructs the Closeness class for the given Graph `G`. If the Closeness scores should be normalized,
-  		then set `normalized` to True. The run() method takes O(nm) time, where n is the number
+		Constructs the Closeness class for the given Graph `G`. If the Closeness scores should not be normalized,
+  		set `normalized` to False. The run() method takes O(nm) time, where n is the number
 	 	 of nodes and m is the number of edges of the graph. NOTICE: the graph has to be connected.
 
 	 	Parameters
@@ -6085,12 +6261,12 @@ cdef class Closeness(Centrality):
 	 	G : Graph
 	 		The graph.
 	 	normalized : bool, optional
-	 		Set this parameter to True if scores should be normalized in the interval [0,1]. Normalization only for unweighted networks.
+	 		Set this parameter to False if scores should not be normalized into an interval of [0,1]. Normalization only for unweighted graphs.
 	 	checkConnectedness : bool, optional
 			turn this off if you know the graph is connected
 	"""
 
-	def __cinit__(self, Graph G, normalized=False, checkConnectedness=True):
+	def __cinit__(self, Graph G, normalized=True, checkConnectedness=True):
 		self._G = G
 		self._this = new _Closeness(G._this, normalized, checkConnectedness)
 
@@ -6712,6 +6888,91 @@ cdef class DynBetweenness:
 			A vector of pairs.
 		"""
 		return self._this.ranking()
+
+
+cdef extern from "cpp/centrality/DynBetweennessOneNode.h":
+	cdef cppclass _DynBetweennessOneNode "NetworKit::DynBetweennessOneNode":
+		_DynBetweennessOneNode(_Graph, node) except +
+		void run() nogil except +
+		void update(_GraphEvent) except +
+		void updateBatch(vector[_GraphEvent]) except +
+		double getDistance(node, node) except +
+		double getSigma(node, node) except +
+		double getSigmax(node, node) except +
+		double getbcx() except +
+
+cdef class DynBetweennessOneNode:
+	""" Dynamic exact algorithm for updating the betweenness of a specific node
+
+	DynBetweennessOneNode(G, x)
+
+	The algorithm aupdates the betweenness of a node after an edge insertions
+	(faster than updating it for all nodes), based on the algorithm
+	proposed by Bergamini et al. "Improving the betweenness centrality of a node by adding links"
+
+	Parameters
+	----------
+	G : Graph
+		the graph
+	x : node
+		the node for which you want to update betweenness
+	"""
+	cdef _DynBetweennessOneNode* _this
+	cdef Graph _G
+
+	def __cinit__(self, Graph G, node):
+		self._G = G
+		self._this = new _DynBetweennessOneNode(G._this, node)
+
+	# this is necessary so that the C++ object gets properly garbage collected
+	def __dealloc__(self):
+		del self._this
+
+	def run(self):
+		with nogil:
+			self._this.run()
+		return self
+
+	def update(self, ev):
+		""" Updates the betweenness centralities after the batch `batch` of edge insertions.
+
+		Parameters
+		----------
+		ev : edge insertion.
+		"""
+		self._this.update(_GraphEvent(ev.type, ev.u, ev.v, ev.w))
+
+	def updateBatch(self, batch):
+		""" Updates the betweenness centrality of node x after the batch `batch` of edge insertions.
+
+		Parameters
+		----------
+		batch : list of GraphEvent.
+		"""
+		cdef vector[_GraphEvent] _batch
+		for ev in batch:
+			_batch.push_back(_GraphEvent(ev.type, ev.u, ev.v, ev.w))
+		self._this.updateBatch(_batch)
+
+	def getDistance(self, u, v):
+		""" Returns the distance between node u and node v.
+		"""
+		return self._this.getDistance(u, v)
+
+	def getSigma(self, u, v):
+		""" Returns the number of shortest paths between node u and node v.
+		"""
+		return self._this.getSigma(u, v)
+
+	def getSigmax(self, u, v):
+		""" Returns the number of shortest paths between node u and node v that go through x.
+		"""
+		return self._this.getSigmax(u, v)
+
+	def getbcx(self):
+		""" Returns the betweenness centrality score of node x
+		"""
+		return self._this.getbcx()
 
 cdef extern from "cpp/centrality/PermanenceCentrality.h":
 	cdef cppclass _PermanenceCentrality "NetworKit::PermanenceCentrality":

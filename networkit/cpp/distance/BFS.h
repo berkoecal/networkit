@@ -39,7 +39,6 @@ public:
 	 * length (number of edges) of the shortest path from @a source to any other node.
 	 */
 	virtual void run();
-
 };
 
 } /* namespace NetworKit */
