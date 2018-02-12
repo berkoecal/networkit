@@ -11,6 +11,8 @@
 #include "../distance/APSP.h"
 #include "../components/ConnectedComponents.h"
 #include "../auxiliary/Log.h"
+#include <valgrind/callgrind.h>
+#include <queue>
 
 namespace NetworKit{
 
@@ -34,6 +36,135 @@ private:
 	edgeweight dist;
 };
 
+//class SpecialBFS : public SSSP{
+//
+//public:
+//	SpecialBFS(const Graph& G, node source, bool storePaths=true, bool storeNodesSortedByDistance=false, node target = none): SSSP(G, source, storePaths, storeNodesSortedByDistance, target){
+//	}
+//
+//	virtual void run(){
+//		edgeweight infDist = std::numeric_limits<edgeweight>::max();
+//			count z = G.upperNodeIdBound();
+//			distances.clear();
+//			distances.resize(z, infDist);
+//
+//			std::vector<bool> visited;
+//			visited.resize(z, false);
+//
+//			if (storePaths) {
+//				previous.clear();
+//				previous.resize(z);
+//				npaths.clear();
+//				npaths.resize(z, 0);
+//				npaths[source] = 1;
+//			}
+//
+//			if (storeNodesSortedByDistance) {
+//				std::vector<node> empty;
+//				std::swap(nodesSortedByDistance, empty);
+//			}
+//
+//			std::queue<node> q;
+//			q.push(source);
+//			visited[source] = true;
+//			distances[source] = 0;
+//			bool breakWhenFound = (target != none);
+//			while (! q.empty()) {
+//				node u = q.front();
+//				q.pop();
+//
+//				if (storeNodesSortedByDistance) {
+//					nodesSortedByDistance.push_back(u);
+//				}
+//				if (breakWhenFound && target == u) {
+//					break;
+//				}
+//
+//				// TRACE("current node in BFS: " , u);
+//		//		TRACE(distances);
+//
+//				bool is_leaf_of_BFS = true;			//check if u is leaf of our BFS-tree, i.e. neighbors are either visited or not existent.
+//
+//				// insert untouched neighbors into queue
+//				G.forNeighborsOf(u, [&](node v) {
+//					// TRACE("scanning neighbor ", v);
+//					if (!visited[v]) {
+//						is_leaf_of_BFS = false;
+//						q.push(v);
+//						visited[v] = true;
+//						distances[v] = distances[u] + 1;
+//
+//						if (storePaths) {
+//							previous[v] = {u};
+//							npaths[v] = npaths[u];
+//						}
+//					} else if (storePaths && (distances[v] == distances[u] + 1)) {
+//						previous[v].push_back(u); 	// additional predecessor
+//						npaths[v] += npaths[u]; 	// all the shortest paths to u are also shortest paths to v now
+//					}
+//				});
+//
+//				if(is_leaf_of_BFS){
+//					farApartPairs.emplace(source, u, distances[u]);
+//				}
+//			}
+//
+//	}
+//
+//	bool comparator(NodeTupleWithDist const& a, NodeTupleWithDist const& b){
+//		return a.distance() >= b.distance();
+//	}
+//
+//	std::set<NodeTupleWithDist> getFarApartPairs(){ return farApartPairs;}
+//
+//private:
+//	std::set<NodeTupleWithDist> farApartPairs;
+//};
+//
+//class SpecialAPSP: public Algorithm {
+//
+//public:
+//	SpecialAPSP(const Graph& G): Algorithm(), G(G) {}
+//
+//	void run(){
+//		std::vector<edgeweight> distanceVector(G.upperNodeIdBound(), 0.0);
+//		distances.resize(G.upperNodeIdBound(), distanceVector);
+//		eccentricity.resize(G.upperNodeIdBound(),0.0);
+//
+//		if (!G.isWeighted()) {
+//			G.parallelForNodes([&](node u){
+//				SpecialBFS bfs(G, u, true, true);
+//				bfs.run();
+//				distances[u] = bfs.getDistances();
+//
+//				auto sorted_nodes = bfs.getNodesSortedByDistance();
+//				auto const& eccentricity_node = sorted_nodes.back();
+//				eccentricity[u] = distances[u][eccentricity_node];
+//
+//				allFarApartPairs.insert(bfs.getFarApartPairs().begin(), bfs.getFarApartPairs().end());
+//			});
+//		}else{
+//			throw std::runtime_error("Graph is not unweighted!");
+//		}
+//		hasRun = true;
+//	}
+//
+//	std::vector<std::vector<edgeweight> > getDistances() const {if (!hasRun) throw std::runtime_error("Call run method first"); return distances;}
+//
+//	edgeweight getDistance(node u, node v) const {if (!hasRun) throw std::runtime_error("Call run method first"); return distances[u][v];}
+//
+//	edgeweight getEccentricity(node u) const {if (!hasRun) throw std::runtime_error("Call run method first"); return eccentricity[u];}
+//
+//	virtual bool isParallel() const override { return true; }
+//
+//protected:
+//	const Graph& G;
+//	std::vector<std::vector<edgeweight> > distances;
+//	std::vector<edgeweight> eccentricity;
+//	std::set<NodeTupleWithDist> allFarApartPairs; //not sorted by distance
+//};
+
+
 Hyperbolicity::Hyperbolicity(const Graph& G): Algorithm(), graph(G) {}
 
 void Hyperbolicity::run(){
@@ -43,13 +174,21 @@ void Hyperbolicity::run(){
 	* We (temporarily) assume the graph to be connected 
 	*/     
 	if(cc.numberOfComponents() > 1){throw std::runtime_error("Graph is not connected");}
-	hyperbolicity_value = HYP();
-	INFO("Hyperbolicity mit HYP: ", hyperbolicity_value);
+
+	std::clock_t start;
+    double duration;
+    start = std::clock();
+
+    hyperbolicity_value = HYP();
+
+    duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+    INFO("Gesamtzeit von HYP:", duration);
+    INFO("Hyperbolicity mit HYP: ", hyperbolicity_value);
 	hasRun = true;
 }
 
 double Hyperbolicity::HYP(){
-  
+
 	/*
 	* Generate set (ordered by distances) consisting of
 	* pairs of nodes (called NodeTupleWithDist) and
@@ -61,13 +200,27 @@ double Hyperbolicity::HYP(){
 	allPairShortestPaths.run();
 	auto distances = allPairShortestPaths.getDistances();
 	/*
-	* Create NodeTupleWithDist objects only in appropiate order of nodes:
+	* Create NodeTupleWithDist objects only in appropriate order of nodes:
 	* allowed: (2,5) not allowed: (5,2)
 	*/
 	
-	for(node i=0; i < graph.numberOfNodes(); ++i){
-	  for(node j=i+1; j < graph.numberOfNodes(); ++j){
-	    ordered_tuples.emplace(i,j, allPairShortestPaths.getDistance(i,j));
+
+	for(node u=0; u < graph.numberOfNodes(); ++u){
+	  for(node v=u+1; v < graph.numberOfNodes(); ++v){
+		  bool farApart = true;
+		  for(node w=0; w < graph.numberOfNodes(); ++w){
+			  if(w==u or w==v){
+				  continue;
+			  }
+			  if(distances[u][w] == distances[v][w]+distances[v][u]
+			  or distances[v][w] == distances[w][u]+distances[u][v]){
+				  farApart=false;
+				  break;
+			  }
+		  }
+		  if(farApart){
+			 ordered_tuples.emplace(u,v, distances[u][v]);
+		  }
 	  }
 	}
 	
@@ -81,12 +234,15 @@ double Hyperbolicity::HYP(){
 	std::vector<bool> seen(graph.numberOfNodes(), false);
 	std::set<node> was_seen;
 	std::vector<std::vector<node>> mate(graph.numberOfNodes());
-	
- 	for(auto it_1 = ordered_tuples.begin(); it_1 != ordered_tuples.end(); ++it_1){	
+
+	std::clock_t start;
+    double duration;
+    start = std::clock();
+
+	for(auto it_1 = ordered_tuples.begin(); it_1 != ordered_tuples.end(); ++it_1){
 	    node x = it_1->index_a();
 	    node y = it_1->index_b();
-	    	    
-	   
+
 	    //TODO parallelisieren
 	    //Lemma5
 	    for(auto const v: was_seen){	
@@ -103,7 +259,8 @@ double Hyperbolicity::HYP(){
 			    
 			    h_diff = std::max(h_diff, first-second);	    
 			    if(it_1->distance() <= h_diff){
-			      return h_diff/2;
+			    		goto Ende;
+			    		return h_diff/2;
 			    }
 			}
 		    }
@@ -116,9 +273,11 @@ double Hyperbolicity::HYP(){
 	    was_seen.insert(y);
 	    
 	}
+	Ende:
+	duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+	INFO("Laufzeit vom Hauptblock:", duration);
 	
 	return h_diff/2;
-	
 }
 
 bool Hyperbolicity::is_acceptable(std::vector<std::vector<edgeweight>> const& distances, 

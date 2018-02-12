@@ -46,7 +46,7 @@ namespace NetworKit{
   TEST_F(HyperbolicityGTest, testHyperbolicity3) {
     
     auto Reader = METISGraphReader();
-    Graph G = Reader.read("input/power.graph");
+    Graph G = Reader.read("input/karate.graph");
     
     std::clock_t start;
     double duration;
