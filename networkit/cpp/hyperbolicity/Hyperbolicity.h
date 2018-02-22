@@ -10,6 +10,7 @@
 
 #include "../graph/Graph.h"
 #include "../base/Algorithm.h"
+#include "SymmetricMatrix.h"
 
 namespace NetworKit{
   
@@ -42,9 +43,9 @@ protected:
 	double hyperbolicity_value;
 	double naiveAlgorithm();
 	double HYP(); 				//original name of corresponding paper BCCM15
-	node centralNode(std::vector<std::vector<edgeweight>> const& distances);
-	bool is_acceptable(std::vector<std::vector<edgeweight>> const& distances, node const& x, node const& y, node const& v, edgeweight const& current_lower_bound, edgeweight const& eccentricity);
-	bool is_valuable(std::vector<std::vector<edgeweight>> const& distances,node const& x, node const& y, node const& v, edgeweight const& current_lower_bound, edgeweight const& eccentricity, node const& central_node);
+	node centralNode(SymMatrix<edgeweight, node> const& distances);
+	bool is_acceptable(SymMatrix<edgeweight, node> const& distances, node const& x, node const& y, node const& v, edgeweight const& current_lower_bound, edgeweight const& eccentricity);
+	bool is_valuable(SymMatrix<edgeweight, node> const& distances,node const& x, node const& y, node const& v, edgeweight const& current_lower_bound, edgeweight const& eccentricity, node const& central_node);
 };
  
 } /* namespace NetworKit */

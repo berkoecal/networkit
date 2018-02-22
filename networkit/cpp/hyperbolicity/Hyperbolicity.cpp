@@ -7,12 +7,14 @@
 #include<set>
 #include<iostream>
 #include<algorithm>
+#include <queue>
+//#include <mutex>
 #include "Hyperbolicity.h"
 #include "../distance/APSP.h"
 #include "../components/ConnectedComponents.h"
 #include "../auxiliary/Log.h"
 #include <valgrind/callgrind.h>
-#include <queue>
+#include "CustomizedBFS.h"
 
 namespace NetworKit{
 
@@ -35,134 +37,6 @@ private:
 	node indexB;
 	edgeweight dist;
 };
-
-//class SpecialBFS : public SSSP{
-//
-//public:
-//	SpecialBFS(const Graph& G, node source, bool storePaths=true, bool storeNodesSortedByDistance=false, node target = none): SSSP(G, source, storePaths, storeNodesSortedByDistance, target){
-//	}
-//
-//	virtual void run(){
-//		edgeweight infDist = std::numeric_limits<edgeweight>::max();
-//			count z = G.upperNodeIdBound();
-//			distances.clear();
-//			distances.resize(z, infDist);
-//
-//			std::vector<bool> visited;
-//			visited.resize(z, false);
-//
-//			if (storePaths) {
-//				previous.clear();
-//				previous.resize(z);
-//				npaths.clear();
-//				npaths.resize(z, 0);
-//				npaths[source] = 1;
-//			}
-//
-//			if (storeNodesSortedByDistance) {
-//				std::vector<node> empty;
-//				std::swap(nodesSortedByDistance, empty);
-//			}
-//
-//			std::queue<node> q;
-//			q.push(source);
-//			visited[source] = true;
-//			distances[source] = 0;
-//			bool breakWhenFound = (target != none);
-//			while (! q.empty()) {
-//				node u = q.front();
-//				q.pop();
-//
-//				if (storeNodesSortedByDistance) {
-//					nodesSortedByDistance.push_back(u);
-//				}
-//				if (breakWhenFound && target == u) {
-//					break;
-//				}
-//
-//				// TRACE("current node in BFS: " , u);
-//		//		TRACE(distances);
-//
-//				bool is_leaf_of_BFS = true;			//check if u is leaf of our BFS-tree, i.e. neighbors are either visited or not existent.
-//
-//				// insert untouched neighbors into queue
-//				G.forNeighborsOf(u, [&](node v) {
-//					// TRACE("scanning neighbor ", v);
-//					if (!visited[v]) {
-//						is_leaf_of_BFS = false;
-//						q.push(v);
-//						visited[v] = true;
-//						distances[v] = distances[u] + 1;
-//
-//						if (storePaths) {
-//							previous[v] = {u};
-//							npaths[v] = npaths[u];
-//						}
-//					} else if (storePaths && (distances[v] == distances[u] + 1)) {
-//						previous[v].push_back(u); 	// additional predecessor
-//						npaths[v] += npaths[u]; 	// all the shortest paths to u are also shortest paths to v now
-//					}
-//				});
-//
-//				if(is_leaf_of_BFS){
-//					farApartPairs.emplace(source, u, distances[u]);
-//				}
-//			}
-//
-//	}
-//
-//	bool comparator(NodeTupleWithDist const& a, NodeTupleWithDist const& b){
-//		return a.distance() >= b.distance();
-//	}
-//
-//	std::set<NodeTupleWithDist> getFarApartPairs(){ return farApartPairs;}
-//
-//private:
-//	std::set<NodeTupleWithDist> farApartPairs;
-//};
-//
-//class SpecialAPSP: public Algorithm {
-//
-//public:
-//	SpecialAPSP(const Graph& G): Algorithm(), G(G) {}
-//
-//	void run(){
-//		std::vector<edgeweight> distanceVector(G.upperNodeIdBound(), 0.0);
-//		distances.resize(G.upperNodeIdBound(), distanceVector);
-//		eccentricity.resize(G.upperNodeIdBound(),0.0);
-//
-//		if (!G.isWeighted()) {
-//			G.parallelForNodes([&](node u){
-//				SpecialBFS bfs(G, u, true, true);
-//				bfs.run();
-//				distances[u] = bfs.getDistances();
-//
-//				auto sorted_nodes = bfs.getNodesSortedByDistance();
-//				auto const& eccentricity_node = sorted_nodes.back();
-//				eccentricity[u] = distances[u][eccentricity_node];
-//
-//				allFarApartPairs.insert(bfs.getFarApartPairs().begin(), bfs.getFarApartPairs().end());
-//			});
-//		}else{
-//			throw std::runtime_error("Graph is not unweighted!");
-//		}
-//		hasRun = true;
-//	}
-//
-//	std::vector<std::vector<edgeweight> > getDistances() const {if (!hasRun) throw std::runtime_error("Call run method first"); return distances;}
-//
-//	edgeweight getDistance(node u, node v) const {if (!hasRun) throw std::runtime_error("Call run method first"); return distances[u][v];}
-//
-//	edgeweight getEccentricity(node u) const {if (!hasRun) throw std::runtime_error("Call run method first"); return eccentricity[u];}
-//
-//	virtual bool isParallel() const override { return true; }
-//
-//protected:
-//	const Graph& G;
-//	std::vector<std::vector<edgeweight> > distances;
-//	std::vector<edgeweight> eccentricity;
-//	std::set<NodeTupleWithDist> allFarApartPairs; //not sorted by distance
-//};
 
 
 Hyperbolicity::Hyperbolicity(const Graph& G): Algorithm(), graph(G) {}
@@ -196,42 +70,43 @@ double Hyperbolicity::HYP(){
 	*/	
 	auto comp = [](NodeTupleWithDist const& a, NodeTupleWithDist const& b)-> bool {return a.distance() >= b.distance();};
 	auto ordered_tuples = std::set<NodeTupleWithDist, decltype(comp)>(comp);	
-	APSP allPairShortestPaths(graph);
-	allPairShortestPaths.run();
-	auto distances = allPairShortestPaths.getDistances();
+
+	CustomizedBFS cBFS(graph);
+	cBFS.run();
+	SymMatrix<bool, node>  const& farApartPairs = cBFS.getFarApartPairs();
+	SymMatrix<edgeweight, node> const& distances = cBFS.getDistances();
+
 	/*
 	* Create NodeTupleWithDist objects only in appropriate order of nodes:
 	* allowed: (2,5) not allowed: (5,2)
 	*/
 	
-
+	//Add all far-apart pairs to the set
 	for(node u=0; u < graph.numberOfNodes(); ++u){
-	  for(node v=u+1; v < graph.numberOfNodes(); ++v){
-		  bool farApart = true;
-		  for(node w=0; w < graph.numberOfNodes(); ++w){
-			  if(w==u or w==v){
-				  continue;
-			  }
-			  if(distances[u][w] == distances[v][w]+distances[v][u]
-			  or distances[v][w] == distances[w][u]+distances[u][v]){
-				  farApart=false;
-				  break;
-			  }
-		  }
-		  if(farApart){
-			 ordered_tuples.emplace(u,v, distances[u][v]);
-		  }
-	  }
+		for(node v = u; v < graph.numberOfNodes(); ++v){
+			if(farApartPairs.element(u,v)){
+				ordered_tuples.emplace(u,v, distances.element(u,v));
+			}
+		}
 	}
-	
+
+	INFO("Number of Far Apart Pairs: ", ordered_tuples.size(), " with percantage of ", static_cast<double>(ordered_tuples.size()/static_cast<double>((graph.numberOfNodes()*graph.numberOfNodes()/2))));
+
 	/*
 	 * Compute central node according to closeness centrality.
 	 * Since we already have computed pairwise distances there is no need to apply the closeness class.
 	 */
+
+	std::clock_t start_c;
+    double duration_c;
+    start_c = std::clock();
 	node central_node = centralNode(distances);
 	
+    duration_c = (std::clock() - start_c) / (double) CLOCKS_PER_SEC;
+
+    INFO("Time of Central Node Computation: ", duration_c);
+
 	edgeweight h_diff = 0;
-	std::vector<bool> seen(graph.numberOfNodes(), false);
 	std::set<node> was_seen;
 	std::vector<std::vector<node>> mate(graph.numberOfNodes());
 
@@ -239,40 +114,37 @@ double Hyperbolicity::HYP(){
     double duration;
     start = std::clock();
 
-	for(auto it_1 = ordered_tuples.begin(); it_1 != ordered_tuples.end(); ++it_1){
-	    node x = it_1->index_a();
-	    node y = it_1->index_b();
+    for(auto it_1 = ordered_tuples.begin(); it_1 != ordered_tuples.end(); ++it_1){
+    	node x = it_1->index_a();
+    	node y = it_1->index_b();
 
-	    //TODO parallelisieren
-	    //Lemma5
-	    for(auto const v: was_seen){	
-		  if(is_valuable(distances,x,y,v, h_diff/2, allPairShortestPaths.getEccentricity(v), central_node)){
-		    for(const node w: mate[v]){
-			if(is_acceptable(distances, x,y,w, h_diff/2, allPairShortestPaths.getEccentricity(w))){
-			    //calculation of maximum and updating hyperbolicity
-			    auto const sum1 = it_1->distance() + distances[v][w];
-			    auto const sum2 = distances[x][v] + distances[y][w];
-			    auto const sum3 = distances[x][w] + distances[y][v];
-			    
-			    edgeweight first = std::max(sum1,sum2);
-			    edgeweight second = std::max(std::min(sum1,sum2), sum3);
-			    
-			    h_diff = std::max(h_diff, first-second);	    
-			    if(it_1->distance() <= h_diff){
-			    		goto Ende;
-			    		return h_diff/2;
-			    }
-			}
-		    }
-		  }		
-	    }
-	    
-	    mate[x].push_back(y);
-	    mate[y].push_back(x);
-	    was_seen.insert(x);
-	    was_seen.insert(y);
-	    
-	}
+    	//TODO parallelisieren
+    	//Lemma5
+    	for(auto const v: was_seen){
+    		if(is_valuable(distances,x,y,v, h_diff/2, cBFS.getEccentricity(v), central_node)){
+    			for(const node w: mate[v]){
+    				if(is_acceptable(distances, x,y,w, h_diff/2, cBFS.getEccentricity(w))){
+
+    					//calculation of maximum and updating hyperbolicity: max(h_diff, S1 - max(S2,S3))
+    					h_diff = std::max(h_diff, it_1->distance() + distances.element(v,w) -
+    							std::max(distances.element(x,v) + distances.element(y,w),
+    									distances.element(x,w) + distances.element(y,v)));
+
+    					if(it_1->distance() <= h_diff){
+    						goto Ende;
+    						return h_diff/2;
+    					}
+    				}
+    			}
+    		}
+    	}
+
+    	mate[x].push_back(y);
+    	mate[y].push_back(x);
+    	was_seen.insert(x);
+    	was_seen.insert(y);
+    }
+
 	Ende:
 	duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
 	INFO("Laufzeit vom Hauptblock:", duration);
@@ -280,14 +152,14 @@ double Hyperbolicity::HYP(){
 	return h_diff/2;
 }
 
-bool Hyperbolicity::is_acceptable(std::vector<std::vector<edgeweight>> const& distances, 
+bool Hyperbolicity::is_acceptable(SymMatrix<edgeweight, node> const& distances,
 				  node const& x, node const& y, node const& v, 
 				  edgeweight const& current_lower_bound, 
 				  edgeweight const& eccentricity)
 {
-	edgeweight const& distXV = distances[x][v];
-	edgeweight const& distYV = distances[y][v];
-	edgeweight const& distXY = distances[x][y];
+	edgeweight const& distXV = distances.element(x,v);
+	edgeweight const& distYV = distances.element(y,v);
+	edgeweight const& distXY = distances.element(x,y);
 	
 	//Corollary 7
 	if(distXV <= current_lower_bound or distYV <= current_lower_bound){
@@ -305,7 +177,7 @@ bool Hyperbolicity::is_acceptable(std::vector<std::vector<edgeweight>> const& di
 	return true;
 }
 
-bool Hyperbolicity::is_valuable(std::vector<std::vector<edgeweight>> const& distances, 
+bool Hyperbolicity::is_valuable(SymMatrix<edgeweight, node> const& distances,
 				node const& x, node const& y, node const& v, 
 				edgeweight const& current_lower_bound, 
 				edgeweight const& eccentricity,
@@ -313,10 +185,10 @@ bool Hyperbolicity::is_valuable(std::vector<std::vector<edgeweight>> const& dist
  			      )
 {
 	if(is_acceptable(distances, x, y, v, current_lower_bound, eccentricity)){
-	    edgeweight const& distXV = distances[x][v];
-	    edgeweight const& distYV = distances[y][v];
-	    edgeweight const& distXY = distances[x][y];
-	    edgeweight const& distVC = distances[central_node][v];
+	    edgeweight const& distXV = distances.element(x,v);
+	    edgeweight const& distYV = distances.element(y,v);
+	    edgeweight const& distXY = distances.element(x,y);
+	    edgeweight const& distVC = distances.element(central_node,v);
 	    if((distXY- distXV - distYV + distVC)/2 > current_lower_bound){
 		return true;
 	    }
@@ -325,15 +197,17 @@ bool Hyperbolicity::is_valuable(std::vector<std::vector<edgeweight>> const& dist
 	return false;
 }
 
-node Hyperbolicity::centralNode(std::vector<std::vector<edgeweight>> const& distances){
+//TODO parallelize with parallelSumForNodes
+
+node Hyperbolicity::centralNode(SymMatrix<edgeweight, node> const& distances){
 	edgeweight minimum_value = std::numeric_limits<edgeweight>::max();
 	//dummy initialization
 	node most_central_node=0;
-	for(node u = 0; u < graph.upperNodeIdBound(); ++u){
+	for(node u = 0; u < graph.numberOfNodes(); ++u){
 	    //dummy initialization
 	    edgeweight sum = 0;
-	    for(const edgeweight dist: distances[u]){
-		sum+= dist;
+	    for(node v = u; v < graph.numberOfNodes(); ++v){
+			sum+= distances.element(u,v);
 	    }
 	    if(minimum_value > sum){
 	      minimum_value = sum;
@@ -349,7 +223,6 @@ node Hyperbolicity::centralNode(std::vector<std::vector<edgeweight>> const& dist
 double Hyperbolicity::naiveAlgorithm(){
 	
 	//TODO consider all connected components
-	//TODO Far-Apart Pairs
   
 	/*
 	 * Generate set (ordered by distances) consisting of

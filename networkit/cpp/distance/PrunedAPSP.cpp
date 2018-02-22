@@ -57,6 +57,7 @@ void PrunedAPSP::prunedBFS(node v)
 	std::vector<edgeweight> T = computeDistanceVector(v);
 	T[v] = 0;
 	
+
 	while(not q.empty()){
 	    node const u = q.front();
 	    q.pop();
