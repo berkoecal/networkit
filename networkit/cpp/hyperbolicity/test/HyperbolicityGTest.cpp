@@ -9,6 +9,7 @@
 #include "HyperbolicityGTest.h"
 #include "../Hyperbolicity.h"
 #include "../../io/METISGraphReader.h"
+#include "../../io/KONECTGraphReader.h"
 #include "../CustomizedBFS.h"
 #include "../../distance/APSP.h"
 
@@ -27,10 +28,25 @@ namespace NetworKit{
     hyperbolicity.run(); 
   }
   
-  TEST_F(HyperbolicityGTest, testHyperbolicityX) {
+  TEST_F(HyperbolicityGTest, testHyperbolicityMETIS) {
 
 	auto Reader = METISGraphReader();
-	Graph G = Reader.read("input/power.graph");
+	Graph G = Reader.read("input/mapping/grid-8x8x8-dist-arch.graph");
+
+	std::clock_t start;
+	double duration;
+	start = std::clock();
+
+    Hyperbolicity hyperbolicity(G);
+    hyperbolicity.run();
+
+    duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityKONECT) {
+
+	auto Reader = KONECTGraphReader();
+	Graph G = Reader.read("input/foodweb-baydry.konect");
 
 	std::clock_t start;
 	double duration;
@@ -63,18 +79,36 @@ namespace NetworKit{
 
   TEST_F(HyperbolicityGTest, testHyperbolicity2) {
     
-    int n = 8;
+	//4x4 grid
+
+    int n = 16;
     Graph G(n);
     
     G.addEdge(0, 1);
     G.addEdge(1, 2);
     G.addEdge(2, 3);
-    G.addEdge(3, 4);
     G.addEdge(4, 5);
     G.addEdge(5, 6);
     G.addEdge(6, 7);
-    G.addEdge(7, 0);
-    
+    G.addEdge(8, 9);
+    G.addEdge(9, 10);
+    G.addEdge(10, 11);
+    G.addEdge(12, 13);
+    G.addEdge(13, 14);
+    G.addEdge(14, 15);
+    G.addEdge(0, 4);
+    G.addEdge(1, 5);
+    G.addEdge(2, 6);
+    G.addEdge(3, 7);
+    G.addEdge(4, 8);
+    G.addEdge(5, 9);
+    G.addEdge(6, 10);
+    G.addEdge(7, 11);
+    G.addEdge(8, 12);
+    G.addEdge(9, 13);
+    G.addEdge(10, 14);
+    G.addEdge(11, 15);
+
     Hyperbolicity hyperbolicity(G);
     hyperbolicity.run(); 
   }
@@ -109,17 +143,11 @@ namespace NetworKit{
   }
 
   TEST_F(HyperbolicityGTest, testCustomizedBFS){
-	 int n = 9;
+	 int n = 3;
 	 Graph G(n);
 	 G.addEdge(0,1);
-	 G.addEdge(0,2);
-	 G.addEdge(1,3);
-	 G.addEdge(1,4);
-	 G.addEdge(2,5);
-	 G.addEdge(1,3);
-	 G.addEdge(4,6);
-	 G.addEdge(4,7);
-	 G.addEdge(5,8);
+	 G.addEdge(1,2);
+	 G.addEdge(2,0);
 
 	 CustomizedBFS cBFS(G);
 	 cBFS.run();
