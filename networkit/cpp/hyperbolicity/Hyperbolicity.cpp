@@ -15,6 +15,9 @@
 #include "../auxiliary/Log.h"
 #include <valgrind/callgrind.h>
 #include "CustomizedBFS.h"
+#include "SymmetricMatrix.h"
+#include "../centrality/TopCloseness.h"
+#include "../components/BiconnectedComponents.h"
 
 namespace NetworKit{
 
@@ -52,7 +55,6 @@ void Hyperbolicity::run(){
 	std::clock_t start;
     double duration;
     start = std::clock();
-
     hyperbolicity_value = HYP();
 
     duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
@@ -62,93 +64,106 @@ void Hyperbolicity::run(){
 }
 
 double Hyperbolicity::HYP(){
-
-	/*
-	* Generate set (ordered by distances) consisting of
-	* pairs of nodes (called NodeTupleWithDist) and
-	* compute pairwise distances.
-	*/	
 	auto comp = [](NodeTupleWithDist const& a, NodeTupleWithDist const& b)-> bool {return a.distance() >= b.distance();};
 	auto ordered_tuples = std::set<NodeTupleWithDist, decltype(comp)>(comp);	
 
 	CustomizedBFS cBFS(graph);
 	cBFS.run();
-	SymMatrix<bool, node>  const& farApartPairs = cBFS.getFarApartPairs();
-	SymMatrix<edgeweight, node> const& distances = cBFS.getDistances();
-
-	/*
-	* Create NodeTupleWithDist objects only in appropriate order of nodes:
-	* allowed: (2,5) not allowed: (5,2)
-	*/
-	
+	SymMatrix<bool, node>  const& relevantPairs = cBFS.getRelevantPairs();
+	SymMatrix<edgeweight, node> const& distances = cBFS.getExactDistances();
 	//Add all far-apart pairs to the set
 	for(node u=0; u < graph.numberOfNodes(); ++u){
 		for(node v = u; v < graph.numberOfNodes(); ++v){
-			if(farApartPairs.element(u,v)){
+			if(relevantPairs.element(u,v)){
 				ordered_tuples.emplace(u,v, distances.element(u,v));
 			}
 		}
 	}
 
-	INFO("Number of Far Apart Pairs: ", ordered_tuples.size(), " with percantage of ", static_cast<double>(ordered_tuples.size()/static_cast<double>((graph.numberOfNodes()*graph.numberOfNodes()/2))));
 
-	/*
-	 * Compute central node according to closeness centrality.
-	 * Since we already have computed pairwise distances there is no need to apply the closeness class.
-	 */
+	INFO("Number of Far Apart Pairs: ", ordered_tuples.size(),
+			" with percantage of ", static_cast<double>(ordered_tuples.size()/static_cast<double>((graph.numberOfNodes()*graph.numberOfNodes()/2)))*100,"%");
 
+   /*
+	* Compute central node according to closeness centrality.
+	* Since we already have computed pairwise distances there is no need to apply the closeness class.
+	*/
 	std::clock_t start_c;
-    double duration_c;
-    start_c = std::clock();
+	double duration_c;
+	start_c = std::clock();
+//	TopCloseness topCentral(graph, 1);
+//	topCentral.run();
+//	INFO("topk node: ",topCentral.topkNodesList()[0]);
+
+	//node central_node = 1308;
 	node central_node = centralNode(distances);
-	
-    duration_c = (std::clock() - start_c) / (double) CLOCKS_PER_SEC;
+	duration_c = (std::clock() - start_c) / (double) CLOCKS_PER_SEC;
+	INFO("Time of Central Node Computation: ", duration_c);
 
-    INFO("Time of Central Node Computation: ", duration_c);
-
-	edgeweight h_diff = 0;
+	double h_diff = 0.0;
 	std::set<node> was_seen;
 	std::vector<std::vector<node>> mate(graph.numberOfNodes());
 
 	std::clock_t start;
-    double duration;
-    start = std::clock();
+	double duration;
+	start = std::clock();
 
-    for(auto it_1 = ordered_tuples.begin(); it_1 != ordered_tuples.end(); ++it_1){
-    	node x = it_1->index_a();
-    	node y = it_1->index_b();
+	size_t iteration = 0;
+	for(auto it_1 = ordered_tuples.begin(); it_1 != ordered_tuples.end(); ++it_1){
+		node x = it_1->index_a();
+		node y = it_1->index_b();
 
-    	//TODO parallelisieren
-    	//Lemma5
-    	for(auto const v: was_seen){
-    		if(is_valuable(distances,x,y,v, h_diff/2, cBFS.getEccentricity(v), central_node)){
-    			for(const node w: mate[v]){
-    				if(is_acceptable(distances, x,y,w, h_diff/2, cBFS.getEccentricity(w))){
+		iteration++;
 
-    					//calculation of maximum and updating hyperbolicity: max(h_diff, S1 - max(S2,S3))
-    					h_diff = std::max(h_diff, it_1->distance() + distances.element(v,w) -
-    							std::max(distances.element(x,v) + distances.element(y,w),
-    									distances.element(x,w) + distances.element(y,v)));
+		//TODO parallelisieren
+		//Lemma5
+		for(auto const v: was_seen){
+			//is v valuable?
+			if(is_valuable(distances,x,y,v, h_diff/2, cBFS.getEccentricity(v), central_node)){
+				for(const node w: mate[v]){
+					//is w acceptable?
+					if(is_acceptable(distances, x,y,w, h_diff/2, cBFS.getEccentricity(w))){
 
-    					if(it_1->distance() <= h_diff){
-    						goto Ende;
-    						return h_diff/2;
-    					}
-    				}
-    			}
-    		}
-    	}
+						//calculation of maximum and updating hyperbolicity: max(h_diff, S1 - max(S2,S3))
+						//    					h_diff = std::max(h_diff, it_1->distance() + distances.element(v,w) -
+						//    							std::max(distances.element(x,v) + distances.element(y,w),
+						//    									distances.element(x,w) + distances.element(y,v)));
 
-    	mate[x].push_back(y);
-    	mate[y].push_back(x);
-    	was_seen.insert(x);
-    	was_seen.insert(y);
-    }
+						double S1 = it_1->distance() + distances.element(v,w);
+						double S2 = distances.element(x,v) + distances.element(y,w);
+						double S3 = distances.element(x,w) + distances.element(y,v);
 
-	Ende:
+						double first = std::max(std::max(S1, S2), S3);
+						double second = std::max(std::min(S1,S2),S3);
+
+						h_diff = std::max(h_diff, first-second);
+
+						if(it_1->distance() <= h_diff){
+							INFO("Quadrupel that attains maximum:", "(",x,",",y,",",v, ",",w, ") with iteration position of (x,y) at ", iteration, "/", ordered_tuples.size());
+							INFO("Distances: ", it_1->distance(), " ", distances.element(v,w), " ", distances.element(x,v), " ",distances.element(y,w), " ", distances.element(x,w), " ", distances.element(y,v));
+							INFO("first: ", first);
+							INFO("second: ", second);
+							INFO("hdiff: ", h_diff);
+							//goto Ende;
+							duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+							INFO("Laufzeit vom Hauptblock:", duration);
+							return h_diff/2;
+						}
+					}
+				}
+			}
+		}
+
+		mate[x].push_back(y);
+		mate[y].push_back(x);
+		was_seen.insert(x);
+		was_seen.insert(y);
+	}
+
+	//Ende:
 	duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
 	INFO("Laufzeit vom Hauptblock:", duration);
-	
+	INFO("Number of pairs considered: ", iteration);
 	return h_diff/2;
 }
 

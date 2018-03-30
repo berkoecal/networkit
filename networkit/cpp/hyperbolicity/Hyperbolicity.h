@@ -36,11 +36,11 @@ public:
 	 * Computes the hyperbolicity for the graph
 	 */ 
 	void run() override;
-	int getHyperbolicity() const {if (!hasRun) throw std::runtime_error("Call run method first"); return hyperbolicity_value;}
+	double getHyperbolicity() const {if (!hasRun) throw std::runtime_error("Call run method first"); return hyperbolicity_value;}
 
 protected:
 	const Graph& graph;
-	double hyperbolicity_value;
+	double hyperbolicity_value=0;
 	double naiveAlgorithm();
 	double HYP(); 				//original name of corresponding paper BCCM15
 	node centralNode(SymMatrix<edgeweight, node> const& distances);

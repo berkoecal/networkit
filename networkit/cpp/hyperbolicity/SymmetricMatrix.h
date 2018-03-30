@@ -1,12 +1,13 @@
 #ifndef SYMMATRIX_H
 #define SYMMATRIX_H
-#include<iostream>
-#include<cassert>
-#include<vector>
-#include<cmath>
+
+#include <cassert>
+#include <cmath>
+#include <iostream>
 #include <stdexcept>
-  
-  template<typename T, typename IndexType = size_t>
+#include <vector>
+#include "../auxiliary/Log.h"
+  template<typename T, typename IndexType>
   class SymMatrix{
   public:
     
@@ -111,8 +112,9 @@
 	  void SymMatrix<T, IndexType>::set(IndexType row, IndexType column, T new_value)
 	  {
 		assert(row<_n and column<_n);
-		if (row > column)
+		if (row > column){
 			std::swap(row,column);
+		}
 		_content[static_cast<IndexType>((column*(column+1))/2)+row] = new_value;
 	  }
   
