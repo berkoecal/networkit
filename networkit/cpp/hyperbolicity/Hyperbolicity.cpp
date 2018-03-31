@@ -45,25 +45,33 @@ private:
 Hyperbolicity::Hyperbolicity(const Graph& G): Algorithm(), graph(G) {}
 
 void Hyperbolicity::run(){
-  	ConnectedComponents cc(graph);
-  	cc.run();	
-       /* 
-	* We (temporarily) assume the graph to be connected 
-	*/     
-	if(cc.numberOfComponents() > 1){throw std::runtime_error("Graph is not connected");}
+	if(graph.numberOfNodes() < 4){
+		hyperbolicity_value = 0;
+		hasRun=true;
+	}else{
+		ConnectedComponents cc(graph);
+		cc.run();
+		/*
+		 * We (temporarily) assume the graph to be connected
+		 */
+		if(cc.numberOfComponents() > 1){throw std::runtime_error("Graph is not connected");}
 
-	std::clock_t start;
-    double duration;
-    start = std::clock();
-    hyperbolicity_value = HYP();
+		std::clock_t start;
+		double duration;
+		start = std::clock();
+		hyperbolicity_value = HYP();
 
-    duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
-    INFO("Gesamtzeit von HYP:", duration);
-    INFO("Hyperbolicity mit HYP: ", hyperbolicity_value);
-	hasRun = true;
+		duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+		INFO("Gesamtzeit von HYP:", duration);
+		INFO("Hyperbolicity mit HYP: ", hyperbolicity_value);
+		hasRun = true;
+	}
 }
 
 double Hyperbolicity::HYP(){
+
+	//-------------------------------------PREPROCESSING-------------------------------------------------
+
 	auto comp = [](NodeTupleWithDist const& a, NodeTupleWithDist const& b)-> bool {return a.distance() >= b.distance();};
 	auto ordered_tuples = std::set<NodeTupleWithDist, decltype(comp)>(comp);	
 
@@ -80,25 +88,28 @@ double Hyperbolicity::HYP(){
 		}
 	}
 
-
+	INFO("Diameter: ", ordered_tuples.begin()->distance());
 	INFO("Number of Far Apart Pairs: ", ordered_tuples.size(),
 			" with percantage of ", static_cast<double>(ordered_tuples.size()/static_cast<double>((graph.numberOfNodes()*graph.numberOfNodes()/2)))*100,"%");
 
-   /*
-	* Compute central node according to closeness centrality.
-	* Since we already have computed pairwise distances there is no need to apply the closeness class.
-	*/
 	std::clock_t start_c;
 	double duration_c;
 	start_c = std::clock();
-//	TopCloseness topCentral(graph, 1);
-//	topCentral.run();
-//	INFO("topk node: ",topCentral.topkNodesList()[0]);
 
-	//node central_node = 1308;
-	node central_node = centralNode(distances);
+	// central node via TopCloseness
+	TopCloseness topCentral(graph, 1);
+	topCentral.run();
+	INFO("topk node: ",topCentral.topkNodesList()[0]);
+	node central_node = topCentral.topkNodesList()[0];
+//	node central_node = centralNode(distances);
+//	node central_node = 15;
+
 	duration_c = (std::clock() - start_c) / (double) CLOCKS_PER_SEC;
 	INFO("Time of Central Node Computation: ", duration_c);
+
+
+
+//------------------------------------------MAIN PART ----------------------------------------------------
 
 	double h_diff = 0.0;
 	std::set<node> was_seen;
@@ -108,46 +119,39 @@ double Hyperbolicity::HYP(){
 	double duration;
 	start = std::clock();
 
+
 	size_t iteration = 0;
+	node best_x=0;
+	node best_y=0;
+	node best_v=0;
+	node best_w=0;
+	size_t position_of_best=0;
+
 	for(auto it_1 = ordered_tuples.begin(); it_1 != ordered_tuples.end(); ++it_1){
+		if(it_1->distance() <= h_diff){
+			goto Ende;
+		}
+
+		iteration++;
 		node x = it_1->index_a();
 		node y = it_1->index_b();
 
-		iteration++;
-
-		//TODO parallelisieren
 		//Lemma5
 		for(auto const v: was_seen){
-			//is v valuable?
-			if(is_valuable(distances,x,y,v, h_diff/2, cBFS.getEccentricity(v), central_node)){
+			if(is_valuable(distances,x,y,v, h_diff, cBFS.getEccentricity(v), central_node)){
 				for(const node w: mate[v]){
-					//is w acceptable?
-					if(is_acceptable(distances, x,y,w, h_diff/2, cBFS.getEccentricity(w))){
-
-						//calculation of maximum and updating hyperbolicity: max(h_diff, S1 - max(S2,S3))
-						//    					h_diff = std::max(h_diff, it_1->distance() + distances.element(v,w) -
-						//    							std::max(distances.element(x,v) + distances.element(y,w),
-						//    									distances.element(x,w) + distances.element(y,v)));
-
+					if(is_acceptable(distances, x,y,w, h_diff, cBFS.getEccentricity(w))){
 						double S1 = it_1->distance() + distances.element(v,w);
 						double S2 = distances.element(x,v) + distances.element(y,w);
 						double S3 = distances.element(x,w) + distances.element(y,v);
-
-						double first = std::max(std::max(S1, S2), S3);
-						double second = std::max(std::min(S1,S2),S3);
-
-						h_diff = std::max(h_diff, first-second);
-
-						if(it_1->distance() <= h_diff){
-							INFO("Quadrupel that attains maximum:", "(",x,",",y,",",v, ",",w, ") with iteration position of (x,y) at ", iteration, "/", ordered_tuples.size());
-							INFO("Distances: ", it_1->distance(), " ", distances.element(v,w), " ", distances.element(x,v), " ",distances.element(y,w), " ", distances.element(x,w), " ", distances.element(y,v));
-							INFO("first: ", first);
-							INFO("second: ", second);
-							INFO("hdiff: ", h_diff);
-							//goto Ende;
-							duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
-							INFO("Laufzeit vom Hauptblock:", duration);
-							return h_diff/2;
+						double largest_diff = std::max(std::max(S1, S2), S3) - std::max(std::min(S1,S2),S3);
+						if(h_diff < largest_diff){
+							best_x = x;
+							best_y = y;
+							best_v = v;
+							best_w = w;
+							position_of_best = iteration;
+							h_diff = largest_diff;
 						}
 					}
 				}
@@ -159,17 +163,22 @@ double Hyperbolicity::HYP(){
 		was_seen.insert(x);
 		was_seen.insert(y);
 	}
-
-	//Ende:
+//#pragma omp barrier;
+	Ende:
 	duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
 	INFO("Laufzeit vom Hauptblock:", duration);
-	INFO("Number of pairs considered: ", iteration);
+	INFO("Number of pairs considered (Abortion Position): ", iteration);
+	INFO("First quadtrupel attaining maximum:", "(",best_x,",",best_y,",",best_v, ",",best_w, ") with iteration position of (x,y) at ", position_of_best, "/", ordered_tuples.size(),
+			" and distances d(x,y)= ", distances.element(best_x,best_y), ", d(v,w)= ", distances.element(best_v,best_w),
+			", d(x,v)= ",distances.element(best_x,best_v), ", d(y,w)= ", distances.element(best_y, best_w),
+			", d(x,w)= ",distances.element(best_x,best_w), ", d(y,v)= ", distances.element(best_y,best_v));
+	INFO("h_diff: ", h_diff);
 	return h_diff/2;
 }
 
 bool Hyperbolicity::is_acceptable(SymMatrix<edgeweight, node> const& distances,
 				  node const& x, node const& y, node const& v, 
-				  edgeweight const& current_lower_bound, 
+				  edgeweight const& current_max_diff, 
 				  edgeweight const& eccentricity)
 {
 	edgeweight const& distXV = distances.element(x,v);
@@ -177,15 +186,15 @@ bool Hyperbolicity::is_acceptable(SymMatrix<edgeweight, node> const& distances,
 	edgeweight const& distXY = distances.element(x,y);
 	
 	//Corollary 7
-	if(distXV <= current_lower_bound or distYV <= current_lower_bound){
+	if(distXV <= current_max_diff/2. or distYV <= current_max_diff/2.){
 	    return false;
 	}
 	//Lemma8
-	if(2*eccentricity - distXV - distYV < 4*current_lower_bound + 2 - distXY){
+	if(2*eccentricity - distXV - distYV < 2*current_max_diff + 2 - distXY){
 	    return false;
 	}
 	//Lemma 9
-	if(eccentricity + distXY - 3*current_lower_bound - 3/2 < std::max(distXY, distYV)){
+	if(eccentricity + distXY - 3*(current_max_diff/2.) - 3/2. < std::max(distXY, distYV)){
 	    return false;
 	}
 	
@@ -193,22 +202,22 @@ bool Hyperbolicity::is_acceptable(SymMatrix<edgeweight, node> const& distances,
 }
 
 bool Hyperbolicity::is_valuable(SymMatrix<edgeweight, node> const& distances,
-				node const& x, node const& y, node const& v, 
-				edgeweight const& current_lower_bound, 
-				edgeweight const& eccentricity,
-				node const& central_node
- 			      )
+		node const& x, node const& y, node const& v,
+		edgeweight const& current_max_diff,
+		edgeweight const& eccentricity,
+		node const& central_node
+)
 {
-	if(is_acceptable(distances, x, y, v, current_lower_bound, eccentricity)){
-	    edgeweight const& distXV = distances.element(x,v);
-	    edgeweight const& distYV = distances.element(y,v);
-	    edgeweight const& distXY = distances.element(x,y);
-	    edgeweight const& distVC = distances.element(central_node,v);
-	    if((distXY- distXV - distYV + distVC)/2 > current_lower_bound){
-		return true;
-	    }
+	if(is_acceptable(distances, x, y, v, current_max_diff, eccentricity)){
+		edgeweight const& distXV = distances.element(x,v);
+		edgeweight const& distYV = distances.element(y,v);
+		edgeweight const& distXY = distances.element(x,y);
+		edgeweight const& distVC = distances.element(central_node,v);
+		if((distXY- distXV - distYV)/2. + distVC > current_max_diff/2.){
+			return true;
+		}
 	}
-	
+
 	return false;
 }
 

@@ -48,7 +48,7 @@ namespace NetworKit{
 	//Graph g = ErdosRenyiGenerator(500, 0.1, false).generate();
 
 	auto Reader = METISGraphReader();
-	Graph G = Reader.read("input/power.graph");
+	Graph G = Reader.read("input/airfoil1.graph");
 
 	BiconnectedComponents bcc(G);
 	bcc.run();
