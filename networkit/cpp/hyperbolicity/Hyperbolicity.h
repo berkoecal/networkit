@@ -39,10 +39,11 @@ public:
 	double getHyperbolicity() const {if (!hasRun) throw std::runtime_error("Call run method first"); return hyperbolicity_value;}
 
 protected:
-	const Graph& graph;
-	double hyperbolicity_value=0;
+	const Graph& G;
+	double hyperbolicity_value;
 	double naiveAlgorithm();
-	double HYP(); 				//original name of corresponding paper BCCM15
+	void HYP_AKIBA();
+	void HYP(); 				//original name of corresponding paper BCCM15
 	node centralNode(SymMatrix<edgeweight, node> const& distances);
 	bool is_acceptable(SymMatrix<edgeweight, node> const& distances, node const& x, node const& y, node const& v, edgeweight const& current_lower_bound, edgeweight const& eccentricity);
 	bool is_valuable(SymMatrix<edgeweight, node> const& distances,node const& x, node const& y, node const& v, edgeweight const& current_lower_bound, edgeweight const& eccentricity, node const& central_node);

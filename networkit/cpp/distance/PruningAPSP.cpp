@@ -1,10 +1,11 @@
 /*
- * PrunedAPSP.cpp
+ * PruningAPSP.cpp
  *       Created on: 01.12.2017
  *       Author: Berk Öcal
  */
 
-#include "PrunedAPSP.h"
+#include "PruningAPSP.h"
+
 #include <cassert>
 #include <mutex>
 
@@ -12,7 +13,7 @@ namespace NetworKit{
 
 std::mutex L_mutex;
   
-PrunedAPSP::PrunedAPSP(const Graph& G): 
+PruningAPSP::PruningAPSP(const Graph& G):
       Algorithm(), 
       G(G), 
       L(G.upperNodeIdBound(), std::vector<NodeWithDistance>()),
@@ -21,7 +22,7 @@ PrunedAPSP::PrunedAPSP(const Graph& G):
   
 }
 
-void PrunedAPSP::run()
+void PruningAPSP::run()
 {				
 	//TODO order vertices by degree	
 	assert(not (G.isDirected() or G.isWeighted()));
@@ -35,7 +36,7 @@ void PrunedAPSP::run()
 	hasRun = true;
 }
 
-void PrunedAPSP::runParallel()
+void PruningAPSP::runParallel()
 {
     assert(not (G.isDirected() or G.isWeighted()));
     
@@ -46,7 +47,7 @@ void PrunedAPSP::runParallel()
     hasRun = true;
 }
 
-void PrunedAPSP::prunedBFS(node v)
+void PruningAPSP::prunedBFS(node v)
 {
 	edgeweight const infDist = std::numeric_limits<edgeweight>::max();
 	std::queue<node> q;
@@ -84,7 +85,7 @@ void PrunedAPSP::prunedBFS(node v)
 			
 }
 
-std::vector<edgeweight> PrunedAPSP::computeDistanceVector(node v) const{
+std::vector<edgeweight> PruningAPSP::computeDistanceVector(node v) const{
 	std::vector<edgeweight> T(G.upperNodeIdBound(), std::numeric_limits<edgeweight>::max());
 	L_mutex.lock();
 	for(auto const& nodedistpair : L[v]){
@@ -95,7 +96,7 @@ std::vector<edgeweight> PrunedAPSP::computeDistanceVector(node v) const{
 	return T;
 } 
 
-edgeweight PrunedAPSP::mergingComputation(std::vector<edgeweight> const& T, node u) const{
+edgeweight PruningAPSP::mergingComputation(std::vector<edgeweight> const& T, node u) const{
 	edgeweight minimum = std::numeric_limits<edgeweight>::max();
 	L_mutex.lock();
 	for(auto const& nodedistpair : L[u]){
@@ -108,7 +109,7 @@ edgeweight PrunedAPSP::mergingComputation(std::vector<edgeweight> const& T, node
 	return minimum;
 }
 
-edgeweight PrunedAPSP::mergingComputation(node v, node u) const{	 	
+edgeweight PruningAPSP::mergingComputation(node v, node u) const{
 	std::vector<edgeweight> const T = computeDistanceVector(v);	
 	return mergingComputation(T, u); 
 }

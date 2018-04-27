@@ -5,8 +5,8 @@
  *       Author: Berk Öcal
  */
 
-#ifndef PrunedAPSP_H
-#define PrunedAPSP_H
+#ifndef PruningAPSP_H
+#define PruningAPSP_H
 
 #include "../graph/Graph.h"
 #include "../base/Algorithm.h"
@@ -23,15 +23,15 @@ private:
 };
 
 
-class PrunedAPSP : public Algorithm
+class PruningAPSP : public Algorithm
 {
 public:
 	/**
-	* Constructs the PrunedAPSP class for @a G and source node @a source.
+	* Constructs the PruningAPSP class for @a G and source node @a source.
 	*
 	* @param G The graph
 	*/
-	PrunedAPSP(const Graph& G);
+	PruningAPSP(const Graph& G);
 	
 	/**
 	* Breadth-first search from @a source.
@@ -71,4 +71,4 @@ private:
 };
 
 }
-#endif // PrunedAPSP_H
+#endif // PruningAPSP_H
