@@ -16,20 +16,23 @@ CustomizedAPSP::CustomizedAPSP(const Graph& G, CentralNodeMethod method): graph(
 		distances(G.upperNodeIdBound(), std::numeric_limits<edgeweight>::max()),
 		eccentricity(G.upperNodeIdBound()),
 		numberOfLandmarks(G.numberOfNodes()),
+		maxComparisons(G.numberOfNodes()),
 		method(method)
 		{};
 
-CustomizedAPSP::CustomizedAPSP(const Graph& G, const count numberOfLandmarks, CentralNodeMethod method): 	graph(G),
+CustomizedAPSP::CustomizedAPSP(const Graph& G, const count numberOfLandmarks, count maxComparisons, CentralNodeMethod method): 	graph(G),
 		relevantPairs(G.upperNodeIdBound(), true),
 		distances(G.upperNodeIdBound(), std::numeric_limits<edgeweight>::max()),
 		eccentricity(G.upperNodeIdBound()),
 		numberOfLandmarks(numberOfLandmarks),
+		maxComparisons(maxComparisons),
 		method(method)
 		{};
 
 void CustomizedAPSP::run(){
 	computeCentralNodes();
 
+	#pragma omp parallel for
 	for(auto i = 0; i < nodesToConsider.size(); ++i){
 		const node source = nodesToConsider[i];
 		count bound = graph.upperNodeIdBound();
@@ -85,17 +88,20 @@ edgeweight CustomizedAPSP::computeBoundedDistance(node u, node v){
 		return 0.0;
 	}
 
-//	if(graph.hasEdge(u,v)){
-//		return 1.0;
-//	}
+	if(graph.hasEdge(u,v)){
+		return 1.0;
+	}
 
 	if(distances.element(u,v) != std::numeric_limits<edgeweight>::max()){
 		return distances.element(u,v);
 	}
 
+
+	//hier vielleicht nur 20 topkCloseness nodes benutzen auch wenn alle BFS mit z.B Degree durchlaufen wurden
+
 	//d(u,v) <= min_{j central node} d(u,j) + d(j,v)
 	edgeweight smallestSeen = std::numeric_limits<edgeweight>::max();
-	for(auto i=0; i< nodesToConsider.size(); ++i){
+	for(auto i=0; i< maxComparisons; ++i){
 		edgeweight upperBound = distances.element(u,nodesToConsider[i]) + distances.element(nodesToConsider[i],v);
 		if(upperBound < smallestSeen){
 			smallestSeen = upperBound;
@@ -113,7 +119,7 @@ void CustomizedAPSP::setBoundedDistances(){
 	}
 }
 
-SymMatrix<edgeweight, node> const& CustomizedAPSP::getExactDistances() const{
+SymMatrix<edgeweight, node> const& CustomizedAPSP::getExactDistances(){
 	if(nodesToConsider.size() < graph.numberOfNodes()){
 		throw std::runtime_error("Exact distances can only be provided if all nodes of the graph are picked as central nodes!");
 	}
@@ -131,19 +137,29 @@ void CustomizedAPSP::computeCentralNodes(){
 			break;
 		case CentralNodeMethod::DEGREE:
 			{
+				std::clock_t start;
+				double duration;
+				start = std::clock();
 				DegreeCentrality degCen(graph);
 				degCen.run();
 				auto nodesByDegree = degCen.ranking();
 				for(auto i=0; i<numberOfLandmarks; ++i){
 					nodesToConsider.push_back(nodesByDegree[i].first);
 				}
+				duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+				INFO("DEGREE CENTRALITIY Running Time within CustomizedAPSP: ", duration);
 			}
 			break;
 		case CentralNodeMethod::TOPCLOSENESS:
 			{
+				std::clock_t start;
+				double duration;
+				start = std::clock();
 				TopCloseness topK(graph, numberOfLandmarks);
 				topK.run();
 				nodesToConsider = topK.topkNodesList();
+				duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
+				INFO("TOPCLOSENESS Running Time within CustomizedAPSP: ", duration);
 			}
 			break;
 		case CentralNodeMethod::RANDOM:
@@ -158,11 +174,11 @@ void CustomizedAPSP::computeCentralNodes(){
 	}
 }
 
-SymMatrix<bool,node> CustomizedAPSP::getRelevantPairs() const{return relevantPairs;}
+SymMatrix<bool,node> CustomizedAPSP::getRelevantPairs(){return relevantPairs;}
 //std::set<NodeTupleWithDist, CustomCompare> const& CustomizedAPSP::getRelPairs() const {return relPairs;}
-SymMatrix<edgeweight, node> CustomizedAPSP::getDistances() const{return distances;}
+SymMatrix<edgeweight, node>& CustomizedAPSP::getDistances(){return distances;}
 edgeweight CustomizedAPSP::getDistance(node u, node v) {return computeBoundedDistance(u,v);}
-edgeweight CustomizedAPSP::getEccentricity(node v) const{return eccentricity[v];}
+edgeweight CustomizedAPSP::getEccentricity(node v){return eccentricity[v];}
 
 }
 

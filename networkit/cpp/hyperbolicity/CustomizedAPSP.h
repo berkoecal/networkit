@@ -61,30 +61,28 @@ public:
 	 * Else, it computes exact distances.
 	 */
 	CustomizedAPSP(const Graph& G, CentralNodeMethod method = CentralNodeMethod::NATURAL);
-	CustomizedAPSP(const Graph& G, count numberOfLandmarks, CentralNodeMethod method = CentralNodeMethod::DEGREE);
+	CustomizedAPSP(const Graph& G, count numberOfLandmarks, count maxComparisons, CentralNodeMethod method = CentralNodeMethod::DEGREE);
 	virtual void run();
-	SymMatrix<bool, node> getRelevantPairs() const;
+	SymMatrix<bool, node> getRelevantPairs();
 	//std::set<NodeTupleWithDist, CustomCompare> const& getRelPairs() const;
-	SymMatrix<edgeweight, node> const& getExactDistances() const;
-	SymMatrix<edgeweight, node> getDistances() const;
+	SymMatrix<edgeweight, node> const& getExactDistances();
+	SymMatrix<edgeweight, node>& getDistances();
 	edgeweight getDistance(node u, node v);
-	edgeweight getEccentricity(node v) const;
+	edgeweight getEccentricity(node v);
 	//count numOfRelPairs;
 
 private:
 	const Graph& graph;
 	SymMatrix<bool, node> relevantPairs;
-	//std::set<NodeTupleWithDist, CustomCompare> relPairs;
-	//Aux::PrioQueue<>
 	SymMatrix<edgeweight, node> distances;
 	std::vector<edgeweight> eccentricity;
 	std::vector<node> nodesToConsider;
 	const count numberOfLandmarks;
+	const count maxComparisons;
 	CentralNodeMethod method;
 	edgeweight computeBoundedDistance(node u, node v);
 	void setBoundedDistances();
 	void computeCentralNodes();
-
 };
 
 }

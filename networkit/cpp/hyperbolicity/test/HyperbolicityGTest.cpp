@@ -47,7 +47,7 @@ namespace NetworKit{
 
   TEST_F(HyperbolicityGTest, testHyperbolicityMETIS) {
 	auto Reader = METISGraphReader();
-	Graph G = Reader.read("input/power.graph");
+	Graph G = Reader.read("input/4elt.graph");
 
 	BiconnectedComponents bcc(G);
 	bcc.run();
@@ -126,7 +126,7 @@ namespace NetworKit{
   TEST_F(HyperbolicityGTest, testHyperbolicitySNAP) {
 
 	  auto Reader = SNAPGraphReader();
-	  Graph G = Reader.read("input/snap/ca-HepTh.txt");
+	  Graph G = Reader.read("input_borassi/032233cit-HepPh");
 
 	  BiconnectedComponents bcc(G);
 	  bcc.run();
@@ -201,8 +201,9 @@ namespace NetworKit{
 	double duration_cAPSP;
 	start2 = std::clock();
 	//CustomizedAPSP cAPSP(G, topk.topkNodesList());
-	count k = 20;
-	CustomizedAPSP cAPSP(G, k);
+	count k = 1000;
+	count maxComp = 20;
+	CustomizedAPSP cAPSP(G, k, maxComp);
 	cAPSP.run();
 	duration_cAPSP = (std::clock() - start2) / (double) CLOCKS_PER_SEC;
 	INFO("Duration CustomizedAPSP with ",k, " nodes: ", duration_cAPSP);
@@ -216,7 +217,7 @@ namespace NetworKit{
 	duration_apsp = (std::clock() - start) / (double) CLOCKS_PER_SEC;
 	INFO("Duration of CustomizedAPSP ", duration_apsp);
 
-	count largeDistance = 20;
+	count largeDistance = 30;
 
 	for(node u= 0; u < G.numberOfNodes(); ++u){
 		for(node v=u; v < G.numberOfNodes(); ++v){

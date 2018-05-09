@@ -4,6 +4,10 @@
  *  Created on: 05.11.2017
  *      Author: Berk Öcal
  */
+
+#define _BSD_SOURCE
+
+#include<sys/time.h>
 #include<set>
 #include<iostream>
 #include<algorithm>
@@ -60,7 +64,7 @@ void Hyperbolicity::run(){
 		 * We (temporarily) assume the graph to be connected
 		 */
 		if(cc.numberOfComponents() > 1){throw std::runtime_error("Graph is not connected");}
-		HYP();
+		HYP_AKIBA();
 		INFO("---------------------------------------");
 		hasRun = true;
 	}
@@ -68,9 +72,19 @@ void Hyperbolicity::run(){
 
 
 void Hyperbolicity::HYP_AKIBA(){
-	std::clock_t startALL;
-	double durationALL;
-	startALL = std::clock();
+	auto get_wall_time = []()->double{
+		struct timeval time;
+		if(gettimeofday(&time, NULL)){
+			return 0;
+		}
+
+		return (double) time.tv_sec + (double) time.tv_usec * .000001;
+	};
+
+//	std::clock_t startALL;
+//	double durationALL;
+//	startALL = std::clock();
+	double startALL = get_wall_time();
 
 	auto lex_comp = [](NodeTupleWithDist const& a, NodeTupleWithDist const& b)-> bool {
 		edgeweight res = a.distance() - b.distance();
@@ -87,55 +101,100 @@ void Hyperbolicity::HYP_AKIBA(){
 		return res > 0;
 	};
 
+
+	auto degree_comp = [&](NodeTupleWithDist const& firstTuple, NodeTupleWithDist const& secTuple)-> bool{
+		edgeweight res = firstTuple.distance() - secTuple.distance();
+		if(res == 0){
+	        count degA = G.degree(firstTuple.index_a()) + G.degree(firstTuple.index_b());
+	        count degB = G.degree(secTuple.index_a()) + G.degree(secTuple.index_b());
+	        return degA >= degB;
+		}
+		return res > 0;
+	};
+
+
+	/*******************************************************************************/
+	/* PREPROCESSING                                                             */
+	/*******************************************************************************/
+
+	edgeweight inf = std::numeric_limits<edgeweight>::max();
 	auto ordered_tuples = std::set<NodeTupleWithDist, decltype(lex_comp)>(lex_comp);
-
 	count n = G.numberOfNodes();
-	count numOfCentralNodes = 20;
+	count numOfCentralNodes = 50;
 	auto k = std::min(n, numOfCentralNodes);
+	auto maxComp = std::min(numOfCentralNodes, (count) 50);
 
-	std::clock_t start;
-	double duration;
-	start = std::clock();
+//	std::clock_t start_capsp;
+//	double duration_capsp;
+//	start_capsp = std::clock();
 
+	double start = get_wall_time();
 	//Upper bounds
-	CustomizedAPSP upperBounds(G, k, CentralNodeMethod::TOPCLOSENESS);
+	CustomizedAPSP upperBounds(G, k, maxComp, CentralNodeMethod::DEGREE);
 	upperBounds.run();
-	duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
-	INFO("Time of CustomizedAPSP", duration);
+	double end = get_wall_time();
+//	duration_capsp = (std::clock() - start_capsp) / (double) CLOCKS_PER_SEC;
+//	INFO("Time of CustomizedAPSP ", duration_capsp);
+	INFO("Time of CustomizedAPSP with ", k, " nodes :", end-start);
 
-	count numOfRelPairs=0;
 	SymMatrix<bool, node> const& relPairs = upperBounds.getRelevantPairs();
+	SymMatrix<edgeweight, node>& distances = upperBounds.getDistances(); // stores exact distances
+	SymMatrix<edgeweight, node> bounds(G.upperNodeIdBound(), inf);  // stores upper bounds distances
+	edgeweight approxDiam = 10;
+
+	//TopK
+	TopCloseness topCentral(G, 1);
+	topCentral.run();
+	auto central_node = topCentral.topkNodesList()[0];
+
+//	Degree
+	DegreeCentrality degCen(G);
+	degCen.run();
+	auto ranks = degCen.ranking();
+	auto c1 = ranks[0].first;
+	auto c2 = ranks[G.upperNodeIdBound()].first;
+
+//	auto farApartTest = [&](node u, node v, edgeweight upperBound){
+//		node smallerDegNode = u;
+//		node largerDegNode = v;
+//		if(G.degree(u) > G.degree(v)){
+//			smallerDegNode = v;
+//			largerDegNode = u;
+//		}
+//
+//		G.forNeighborsOf(smallerDegNode, [&](node neighbor){
+//			if(upperBound+1 == upperBounds.getDistance(neighbor, largerDegNode)){
+//				return false;
+//			}
+//		});
+//
+//		return true;
+//	};
 
 	std::clock_t startTuples;
 	double durationTuples;
 	startTuples = std::clock();
 
+	// in anderer Reihenfolge einfügen
 	for(node u=0; u < G.numberOfNodes(); ++u){
 		for(node v = u; v < G.numberOfNodes(); ++v){
-			if(relPairs.element(u,v)){
-				numOfRelPairs++;
-				ordered_tuples.emplace(u,v, upperBounds.getDistance(u,v));
+			if(relPairs.element(u,v) and distances.element(u,c1) + distances.element(c1,v) > approxDiam/2. +1){
+				auto dist = distances.element(u,v);
+				if(dist == inf){
+					dist = upperBounds.getDistance(u,v);
+				}
+				if(dist > approxDiam/2. +1){
+					bounds.set(u,v, dist);
+					ordered_tuples.emplace(u,v, dist);
+				}
 			}
 		}
 	}
 
+
 	durationTuples = (std::clock() - startTuples) / (double) CLOCKS_PER_SEC;
 	INFO("Duration Tuple Construction ", durationTuples);
-	INFO("Number of RelPairs: ", numOfRelPairs, " with percentage of ", (numOfRelPairs/static_cast<double>((G.numberOfNodes()*G.numberOfNodes()/2)))*100,"%");
-
-	/*	TODO
-	 *  1) 	Approximiere diam(G) schnell (double sweep oder 20(?) central nodes)!	Setze zunächst U=approxDiam(G), L=approxDiam(G)/2
-	 *  2) 	Führe PrunedAPSP aus, d.h es wird zuerst das Prepocessing durchgeführt. Lösche im Preprocessing bereits alle NICHT far-apart Paare
-	 *  	Bemerke: Der Preprocessing Schritt besucht nur sehr wenige Paare (ca. 0%-5% aller Paare des Graphen) -> es werden möglicherweise nur sehr
-	 *  			 wenige eliminiert.
-	 *  3)  Betrachte anschließend nur sortierte Paare P= {(x_0, y_0), (x_1,y_1), ... , (x_k, y_k) | (wobei alle distanzen ≥ L)}
-	 *  4)	Prüfe für jedes Paar (x,y) in P während der Schleife, ob (x,y) far apart mit einem "guten" counternode (= ein zentraler Knoten(?))
-	 *  5)  Abbruchkriterium: h_diff ≥ d(x_k, y_k) ≥ L
-	 *  6) 	Setzt das Abbruchkriterium nicht an, so setze U=L und L= L - L/2 und finde alle Paare (x,y) mit U ≥ d(x,y) ≥ L und füge diese Liste (genannt P') P hinzu
-	 *  	d.h P=P+P'
-	 *  7) 	Iteriere obige Schritte 3) - 6)
-	 */
-
+	INFO("Number of RelPairs: ", ordered_tuples.size(), " with percentage of ", (ordered_tuples.size()/static_cast<double>((G.numberOfNodes()*(G.numberOfNodes()-1)/2)))*100,"%");
 
 	//Akiba
 	std::clock_t start_preproc;
@@ -146,54 +205,177 @@ void Hyperbolicity::HYP_AKIBA(){
 	duration_preproc = (std::clock()-start_preproc)/(double) CLOCKS_PER_SEC;
 	INFO("Time of Preprocessing Pruned: ", duration_preproc);
 
-	//INFO("Number of RelPairs: ", ordered_tuples.size(), " with percentage of ", (ordered_tuples.size()/static_cast<double>((G.numberOfNodes()*G.numberOfNodes()/2)))*100,"%");
 
-	// central node via TopCloseness
-//	TopCloseness topCentral(G, 20);
-//	topCentral.run();
-//	auto list = topCentral.topkNodesList();
-//	node c = list[0];
-//
-//	auto isNotFarApart([&](node u, node v, const double distUV) -> bool{
-//		//for(auto i=0; i< list.size(); ++i){
-//		//for(node w: G.neighbors(u)){
-//			node w = 0;
-//			auto const distUW = pruned.getDistance(u,w);
-//			auto const distVW = pruned.getDistance(v,w);
-//			if((distUV + distUW == distVW) or
-//					distUV + distVW == distUW){
-//				return true;
-//				//break;
-//			}
-//		//}
-//		return false;
-//	});
-//
-//		//Upper bounds
-//		count counter = 0;
-//		count counterLarge=0;
-//		for(node u=0; u < G.numberOfNodes(); ++u){
-//			for(node v = u+1; v < G.numberOfNodes(); ++v){
-//				const double distUV = pruned.getDistance(u,v);
-//				if(distUV >= 50){
-//					counterLarge++;
-//					if(!isNotFarApart(u,v, distUV)){
-//						counter++;
-//					}
-//				}
-//			}
+
+
+	/****************************************************************************
+	 * LAMBDA EXPRESSIONS
+	 ****************************************************************************/
+
+	auto exact_dist = [&](node v, node w) -> edgeweight{
+		if(distances.element(v,w) != inf){
+			return distances.element(v,w);
+		}
+		double dist = pruned.getDistance(v,w);
+		distances.set(v,w, dist);
+		return dist;
+	};
+
+//	auto is_acceptable_for_bounds = [&](const node x, const node y,  const node v, const edgeweight h_diff) -> bool{
+//		//do not compute bounded distance for (x,v) and (y,v) since it might be expensive
+//		if(bounds.element(x,v) == inf or bounds.element(y,v) == inf){
+//			return true;
 //		}
-//		count n = G.numberOfNodes();
-//		INFO("Number of Large Distance Pairs: ", counterLarge, " with ",
-//				(counter/static_cast<double>(n*(n-1)/2))*100);
-//		INFO("Number of Far Apart Pairs according to new method: ", counter, " with ",
-//				(counter/static_cast<double>(n*(n-1)/2))*100);
+//		return ((bounds.element(x,v) <= h_diff/2.) or (bounds.element(y,v) <= h_diff/2.));
+//	};
 
-	//------------------------------------------MAIN PART ----------------------------------------------------
-	INFO("Hyperbolicity:", 0.0);
-	durationALL = (std::clock() - startALL) / (double) CLOCKS_PER_SEC;
-	INFO("Time of complete computation: ", durationALL);
-	hyperbolicity_value = 0.0;
+	auto is_acceptable = [&](const node v,
+			const edgeweight distXY,
+			const edgeweight distXV,
+			const edgeweight distYV,
+			const edgeweight h_diff,
+			const edgeweight largestDistToMates)-> bool{
+
+		//corollary 7
+		if(distXV <= h_diff/2. or distYV <= h_diff/2.){
+			return false;
+		}
+
+		if(2*largestDistToMates - distXV - distYV < 2*h_diff + 2 - distXY){
+			return false;
+		}
+		//Lemma 9
+		if(largestDistToMates+ distXY - 3*(h_diff/2.) - 3/2. < std::max(distXV, distYV)){
+			return false;
+		}
+
+		return true;
+	};
+
+	auto is_valuable = [&](const node v,
+			const edgeweight distXY,
+			const edgeweight distXV,
+			const edgeweight distYV,
+			const edgeweight distVC,
+			const edgeweight h_diff,
+			const edgeweight largestDistToMates)->bool{
+
+		if(is_acceptable(v, distXY, distXV, distYV, h_diff, largestDistToMates)){
+			if((distXY- distXV - distYV)/2. + distVC > h_diff/2.){
+				return true;
+			}
+		}
+		return false;
+	};
+
+
+	/*******************************************************************************/
+	/* MAIN PART                                                             */
+	/*******************************************************************************/
+
+
+	double h_diff = 0.0;
+	std::set<node> was_seen;
+	std::vector<std::vector<node>> mate(G.upperNodeIdBound());
+	std::vector<edgeweight> largestDistToMates(G.upperNodeIdBound());
+
+	std::clock_t start_main;
+	double duration_main;
+	start_main = std::clock();
+
+	// ------ Tracking Data ------
+	size_t iteration = 0;
+	node best_x=0;
+	node best_y=0;
+	node best_v=0;
+	node best_w=0;
+	auto degree_x=0;
+	auto degree_y=0;
+	auto degree_v=0;
+	auto degree_w=0;
+	count quadtruples_visited=0;
+	count position_of_best=0;
+	//-----------------------------
+
+	for(auto tuple = ordered_tuples.begin(); tuple != ordered_tuples.end(); ++tuple){
+		if(tuple->distance() <= h_diff){
+			goto Ende;
+		}
+
+		iteration++;
+		node x = tuple->index_a();
+		node y = tuple->index_b();
+
+		edgeweight distXY = exact_dist(x,y);
+
+		//Lemma5
+		for(auto const v: was_seen){
+			//this function checks if corollary7 is not even fullfilled for upper bounds avoiding exact distance computation
+			if(bounds.element(x,v) <= h_diff/2. or bounds.element(y,v) <= h_diff/2.){
+				continue;
+			}
+			edgeweight distXV = exact_dist(x,v);
+			edgeweight distYV = exact_dist(y,v);
+			edgeweight distVC = exact_dist(v, central_node);
+
+			if(is_valuable(v, distXY, distXV, distYV, distVC, h_diff, largestDistToMates[v])){
+				for(const node w: mate[v]){ //what about quadtrupels (x,y,v,w) where e.g (x,v,y,w) was already considered before
+					edgeweight distXW = exact_dist(x,w);
+					edgeweight distYW = exact_dist(y,w);
+
+					if(is_acceptable(w, distXY, distXW, distYW, h_diff, largestDistToMates[w])){
+						edgeweight distVW = exact_dist(v,w);
+
+						double S1 = distXY + distVW;
+						double S2 = distXV + distYW;
+						double S3 = distXW + distYV;
+						double largest_diff = std::max(std::max(S1, S2), S3) - std::max(std::min(S1,S2),S3);
+						quadtruples_visited++;
+						if(h_diff < largest_diff){
+							best_x = x;
+							best_y = y;
+							best_v = v;
+							best_w = w;
+							degree_x = G.degree(x);
+							degree_y = G.degree(y);
+							degree_v = G.degree(v);
+							degree_w = G.degree(w);
+							position_of_best = iteration;
+							h_diff = largest_diff;
+						}
+					}
+				}
+			}
+		}
+
+		mate[x].push_back(y);
+		mate[y].push_back(x);
+		if(largestDistToMates[x] < distXY){
+			largestDistToMates[x] = distXY;
+		}
+		if(largestDistToMates[y] < distXY){
+			largestDistToMates[y] = distXY;
+		}
+		was_seen.insert(x);
+		was_seen.insert(y);
+	}
+
+	Ende:
+	duration_main = (std::clock() - start_main) / (double) CLOCKS_PER_SEC;
+	INFO("Laufzeit vom Hauptblock:", duration_main);
+	INFO("Number of pairs considered (Abortion Position): ", iteration);
+	INFO("First quadtrupel attaining maximum:", "(",best_x,",",best_y,",",best_v, ",",best_w, ") with iteration position of (x,y) at ", position_of_best, "/", ordered_tuples.size(),
+			" and distances d(x,y)= ", distances.element(best_x,best_y), ", d(v,w)= ", distances.element(best_v,best_w),
+			", d(x,v)= ",distances.element(best_x,best_v), ", d(y,w)= ", distances.element(best_y, best_w),
+			", d(x,w)= ",distances.element(best_x,best_w), ", d(y,v)= ", distances.element(best_y,best_v));
+	INFO("Quadtruples visited: ", quadtruples_visited);
+	INFO("Degrees: ", degree_x, " ", degree_y, " ", degree_v, " ", degree_w);
+	INFO("h_diff: ", h_diff);
+
+	INFO("Hyperbolicity: ", h_diff/2);
+	double endALL = get_wall_time();
+	INFO("Time of complete computation: ", endALL-startALL);
+	hyperbolicity_value = h_diff/2;
 }
 
 void Hyperbolicity::HYP(){
@@ -205,7 +387,7 @@ void Hyperbolicity::HYP(){
 	/* Preprocessing                                                             */
 	/*******************************************************************************/
 
-	auto comp = [](NodeTupleWithDist const& a, NodeTupleWithDist const& b)-> bool {
+	auto lex_comp = [](NodeTupleWithDist const& a, NodeTupleWithDist const& b)-> bool {
 		edgeweight res = a.distance() - b.distance();
 		//If same distance then consider (increasing) lexicographic order
 		if(res == 0){
@@ -220,7 +402,12 @@ void Hyperbolicity::HYP(){
 		return res > 0;
 	};
 
-	auto ordered_tuples = std::set<NodeTupleWithDist, decltype(comp)>(comp);
+//	//TODO
+//	auto degree_comp;
+//	//TODO
+//	auto farness_comp;
+
+	auto ordered_tuples = std::set<NodeTupleWithDist, decltype(lex_comp)>(lex_comp);
 
 	std::clock_t startX;
 	double durationX;
@@ -251,7 +438,7 @@ void Hyperbolicity::HYP(){
 
 	INFO("Diameter: ", ordered_tuples.begin()->distance());
 	INFO("Number of Far Apart Pairs: ", ordered_tuples.size(),
-			" with percantage of ", static_cast<double>(ordered_tuples.size()/static_cast<double>((G.numberOfNodes()*G.numberOfNodes()/2)))*100,"%");
+			" with percantage of ", static_cast<double>(ordered_tuples.size()/static_cast<double>((G.numberOfNodes()*(G.numberOfNodes()-1)/2)))*100,"%");
 
 	std::clock_t start_c;
 	double duration_c;
@@ -272,6 +459,7 @@ void Hyperbolicity::HYP(){
 	double h_diff = 0.0;
 	std::set<node> was_seen;
 	std::vector<std::vector<node>> mate(G.upperNodeIdBound());
+	std::vector<edgeweight> largestDistToMates(G.upperNodeIdBound());
 
 	std::clock_t start;
 	double duration;
@@ -288,6 +476,7 @@ void Hyperbolicity::HYP(){
 	auto degree_v=0;
 	auto degree_w=0;
 	count max_degree_until_abortion=0;
+	count quadtruples_visited=0;
 
 	size_t position_of_best=0;
 
@@ -311,13 +500,14 @@ void Hyperbolicity::HYP(){
 
 		//Lemma5
 		for(auto const v: was_seen){
-			if(is_valuable(distances,x,y,v, h_diff, cAPSP.getEccentricity(v), central_node) ){
+			if(is_valuable(distances,x,y,v, h_diff, largestDistToMates[v], central_node) ){
 				for(const node w: mate[v]){ //what about quadtrupels (x,y,v,w) where e.g (x,v,y,w) was already considered before
-					if(is_acceptable(distances, x,y,w, h_diff, cAPSP.getEccentricity(w))){
+					if(is_acceptable(distances, x,y,w, h_diff, largestDistToMates[w])){
 						double S1 = it_1->distance() + distances.element(v,w);
 						double S2 = distances.element(x,v) + distances.element(y,w);
 						double S3 = distances.element(x,w) + distances.element(y,v);
 						double largest_diff = std::max(std::max(S1, S2), S3) - std::max(std::min(S1,S2),S3);
+						quadtruples_visited++;
 						if(h_diff < largest_diff){
 							best_x = x;
 							best_y = y;
@@ -337,6 +527,12 @@ void Hyperbolicity::HYP(){
 
 		mate[x].push_back(y);
 		mate[y].push_back(x);
+		if(largestDistToMates[x] < distances.element(x,y)){
+			largestDistToMates[x] = distances.element(x,y);
+		}
+		if(largestDistToMates[y] < distances.element(x,y)){
+			largestDistToMates[y] = distances.element(x,y);
+		}
 		was_seen.insert(x);
 		was_seen.insert(y);
 	}
@@ -350,6 +546,7 @@ void Hyperbolicity::HYP(){
 			" and distances d(x,y)= ", distances.element(best_x,best_y), ", d(v,w)= ", distances.element(best_v,best_w),
 			", d(x,v)= ",distances.element(best_x,best_v), ", d(y,w)= ", distances.element(best_y, best_w),
 			", d(x,w)= ",distances.element(best_x,best_w), ", d(y,v)= ", distances.element(best_y,best_v));
+	INFO("Quadtruples visited: ", quadtruples_visited);
 	INFO("Degrees: ", degree_x, " ", degree_y, " ", degree_v, " ", degree_w);
 	INFO("h_diff: ", h_diff);
 
