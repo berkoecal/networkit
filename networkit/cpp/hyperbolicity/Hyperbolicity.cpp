@@ -139,7 +139,7 @@ void Hyperbolicity::HYP_AKIBA(){
 
 	SymMatrix<bool, node> const& relPairs = upperBounds.getRelevantPairs();
 	SymMatrix<edgeweight, node>& distances = upperBounds.getDistances(); // stores exact distances
-	SymMatrix<edgeweight, node> bounds(G.upperNodeIdBound(), inf);  // stores upper bounds distances
+	//SymMatrix<edgeweight, node> bounds(G.upperNodeIdBound(), inf);  // stores upper bounds distances
 	edgeweight approxDiam = 10;
 
 	//TopK
@@ -310,10 +310,6 @@ void Hyperbolicity::HYP_AKIBA(){
 
 		//Lemma5
 		for(auto const v: was_seen){
-			//this function checks if corollary7 is not even fullfilled for upper bounds avoiding exact distance computation
-			if(bounds.element(x,v) <= h_diff/2. or bounds.element(y,v) <= h_diff/2.){
-				continue;
-			}
 			edgeweight distXV = exact_dist(x,v);
 			edgeweight distYV = exact_dist(y,v);
 			edgeweight distVC = exact_dist(v, central_node);
