@@ -184,7 +184,6 @@ void Hyperbolicity::HYP_AKIBA(){
 					dist = upperBounds.getDistance(u,v);
 				}
 				if(dist > approxDiam/2. +1){
-					bounds.set(u,v, dist);
 					ordered_tuples.emplace(u,v, dist);
 				}
 			}
@@ -240,7 +239,7 @@ void Hyperbolicity::HYP_AKIBA(){
 		if(distXV <= h_diff/2. or distYV <= h_diff/2.){
 			return false;
 		}
-
+		//Lemma 8
 		if(2*largestDistToMates - distXV - distYV < 2*h_diff + 2 - distXY){
 			return false;
 		}
