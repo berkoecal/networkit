@@ -1,9 +1,30 @@
 import os
 import subprocess
 import fnmatch
-import ConfigParser
+import sys
+
+if sys.version_info >= (3,0):
+	import configparser as cp
+	getConf = lambda conf, sec, name, fb: conf.get(sec, name, fallback=fb)
+else:
+	import ConfigParser as cp
+	getConf = lambda conf, sec, name, fb: conf.get(sec, name, fb)
 
 home_path = os.environ['HOME']
+
+class DefaultConfigParser(cp.ConfigParser):
+	def get_default(self, section, option, default=None, raw=False, vars=None):
+		"""Get an option value for a given section.
+
+		If the option exists in the section, get_default behaves exactly like
+		get(). If not, default is returned (if not explicitly set: None).
+		"""
+
+		try:
+			return self.get(section, option, raw=raw, vars=vars)
+		except (cp.NoSectionError, cp.NoOptionError):
+			return default
+
 
 def checkStd(compiler):
 	sample = open("sample.cpp", "w")
@@ -46,7 +67,7 @@ def getSourceFiles(target, optimize):
 
 	# walk source directory and find ONLY .cpp files
 	for (dirpath, dirnames, filenames) in os.walk(srcDir):
-	    for name in fnmatch.filter(filenames, "*.cpp"):
+		for name in fnmatch.filter(filenames, "*.cpp"):
 			source.append(os.path.join(dirpath, name))
 
 	# exclude files depending on target, executables will be addes later
@@ -138,26 +159,17 @@ else:
 		print("Use the file build.conf.example to create your build.conf")
 		Exit(1)
 
-	conf = ConfigParser.ConfigParser()
-	conf.read([confPath])     # read the configuration file
+	conf = DefaultConfigParser()
+	conf.read([confPath]) # read the configuration file
 
 	## compiler
-	if compiler is None:
-		cppComp = conf.get("compiler", "cpp", "gcc")
-	else:
-		cppComp = compiler
-	if defines is None:
-		defines = conf.get("compiler", "defines", [])		# defines are optional
-	if defines is not []:
-		defines = defines.split(",")
-
+	cppComp = compiler or conf.get_default("compiler", "cpp", "gcc")
+	# defines are optional
+	defines = defines or conf.get_default("compiler", "defines", "")
+	defines = defines.split(",")
 
 	## C++14 support
-	if stdflag is None:
-		try:
-			stdflag = conf.get("compiler", "std14")
-		except:
-			pass
+	stdflag = stdflag or conf.get_default("compiler", "std14")
 	if stdflag is None or len(stdflag) == 0:
 		# do test compile
 		stdflag = checkStd(cppComp)
@@ -165,27 +177,22 @@ else:
 		conf.set("compiler","std14", stdflag)
 
 	## includes
-	stdInclude = conf.get("includes", "std", "")      # includes for the standard library - may not be needed
-	gtestInclude = conf.get("includes", "gtest")
-	if conf.has_option("includes", "tbb"):
-		tbbInclude = conf.get("includes", "tbb", "")
-	else:
-		tbbInclude = ""
+	# Evaluates the [includes] section of the build.conf file.
+	# Includes may include std, gtest, tbb
+	includes = dict(conf.items("includes"))
 
 	## libraries
-	gtestLib = conf.get("libraries", "gtest")
-	if conf.has_option("libraries", "tbb"):
-		tbbLib = conf.get("libraries", "tbb", "")
-	else:
-		tbbLib = ""
+	# Evaluates the [libraries] section of the build.conf file.
+	# Libraries may include gtest, tbb
+	libraries = dict(conf.items("libraries"))
 
 	env["CC"] = cppComp
 	env["CXX"] = cppComp
 
 	env.Append(CPPDEFINES=defines)
-	env.Append(CPPPATH = [stdInclude, gtestInclude, tbbInclude])
-	env.Append(LIBS = ["gtest"])
-	env.Append(LIBPATH = [gtestLib, tbbLib])
+	env.Append(CPPPATH = list(includes.values()))
+	env.Append(LIBS = list(libraries.keys()))
+	env.Append(LIBPATH = list(libraries.values()))
 
 	with open(confPath, "w") as f:
 		conf.write(f)
@@ -229,10 +236,10 @@ AddOption("--sanitize",
 
 
 try:
-    optimize = GetOption("optimize")
+	optimize = GetOption("optimize")
 except:
-    print("ERROR: Missing option --optimize=<LEVEL>")
-    exit(1)
+	print("ERROR: Missing option --optimize=<LEVEL>")
+	exit(1)
 
 sanitize = None
 try:
@@ -280,27 +287,27 @@ AddOption("--openmp",
 openmp = GetOption("openmp")
 
 if (openmp == "yes") or (openmp == None): # with OpenMP by default
-    env.Append(CPPFLAGS = ["-fopenmp"])
-    env.Append(LINKFLAGS = ["-fopenmp"])
+	env.Append(CPPFLAGS = ["-fopenmp"])
+	env.Append(LINKFLAGS = ["-fopenmp"])
 elif (openmp == "no"):
-    env.Append(LIBS = ["pthread"])
+	env.Append(LIBS = ["pthread"])
 else:
-    print("ERROR: unrecognized option --openmp=%s" % openmp)
-    exit(1)
+	print("ERROR: unrecognized option --openmp=%s" % openmp)
+	exit(1)
 
 # optimize flags
 if optimize == "Dbg":
-    env.Append(CFLAGS = debugCFlags)
-    env.Append(CPPFLAGS = debugCppFlags)
+	env.Append(CFLAGS = debugCFlags)
+	env.Append(CPPFLAGS = debugCppFlags)
 elif optimize == "Opt":
-    env.Append(CFLAGS = optimizedCFlags)
-    env.Append(CPPFLAGS = optimizedCppFlags)
+	env.Append(CFLAGS = optimizedCFlags)
+	env.Append(CPPFLAGS = optimizedCppFlags)
 elif optimize == "Pro":
-	 env.Append(CFLAGS = profileCFlags)
-	 env.Append(CPPFLAGS = profileCppFlags)
+	env.Append(CFLAGS = profileCFlags)
+	env.Append(CPPFLAGS = profileCppFlags)
 else:
-    print("ERROR: invalid optimize: %s" % optimize)
-    exit(1)
+	print("ERROR: invalid optimize: %s" % optimize)
+	exit(1)
 
 # sanitize
 if sanitize:

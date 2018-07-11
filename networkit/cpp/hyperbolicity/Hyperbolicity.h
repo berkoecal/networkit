@@ -42,6 +42,7 @@ protected:
 	const Graph& G;
 	double hyperbolicity_value;
 	double naiveAlgorithm();
+	void HYP_AKIBA2();
 	void HYP_AKIBA();
 	void HYP(); 				//original name of corresponding paper BCCM15
 	node centralNode(SymMatrix<edgeweight, node> const& distances);

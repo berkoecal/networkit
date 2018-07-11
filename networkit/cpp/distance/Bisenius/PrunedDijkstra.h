@@ -22,7 +22,7 @@ public:
 	* @param forwardlabel The labels used for forward search
 	* @ param backwardLabels The labels used for backward search
 	*/
-	PrunedDijkstra(const Graph &G, const std::vector<node> &nodeToRank, std::vector<LandmarkLabel> &forwardLabels, std::vector<LandmarkLabel> &backwardLabels);
+	PrunedDijkstra(const Graph &G, const std::vector<node> &nodeToRank, std::vector<LandmarkLabel> &forwardLabels, std::vector<LandmarkLabel> &backwardLabels, SymMatrix<bool,node> &relPairs);
 
 	/**
     * Runs the pruned search

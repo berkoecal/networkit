@@ -4,7 +4,7 @@
 
 namespace NetworKit {
 
-PrunedSearch::PrunedSearch(const Graph &G, const std::vector<node> &nodeToRank, std::vector<LandmarkLabel> &forwardLabels, std::vector<LandmarkLabel> &backwardLabels) : G(G), nodeToRank(nodeToRank), forwardLabels(forwardLabels), backwardLabels(backwardLabels) {
+PrunedSearch::PrunedSearch(const Graph &G, const std::vector<node> &nodeToRank, std::vector<LandmarkLabel> &forwardLabels, std::vector<LandmarkLabel> &backwardLabels, SymMatrix<bool, node> &relPairs) : G(G), nodeToRank(nodeToRank), forwardLabels(forwardLabels), backwardLabels(backwardLabels), relPairs(relPairs) {
 	count z = G.upperNodeIdBound();
 	edgeweight infDist = std::numeric_limits<edgeweight>::max();
 	distances.resize(z, infDist);

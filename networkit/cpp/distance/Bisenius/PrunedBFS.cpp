@@ -2,7 +2,7 @@
 
 namespace NetworKit {
 
-PrunedBFS::PrunedBFS(const Graph &G, const std::vector<node> &nodeToRank, std::vector<LandmarkLabel> &forwardLabels, std::vector<LandmarkLabel> &backwardLabels) : PrunedSearch(G, nodeToRank, forwardLabels, backwardLabels) {
+PrunedBFS::PrunedBFS(const Graph &G, const std::vector<node> &nodeToRank, std::vector<LandmarkLabel> &forwardLabels, std::vector<LandmarkLabel> &backwardLabels, SymMatrix<bool, node> &relPairs) : PrunedSearch(G, nodeToRank, forwardLabels, backwardLabels, relPairs) {
 	count z = G.upperNodeIdBound();
 	visited.resize(z);
 	parents.resize(z);
@@ -37,6 +37,7 @@ void PrunedBFS::run(node v, bool searchForward) {
 		labels[neighborRank].distances.push_back(distances[u]);
 		labels[neighborRank].parents.push_back(parents[u]);
 		
+		bool relevant = true;
 		
 		auto visit ([&](node w) {
 				if (!visited[w]) {
@@ -45,12 +46,24 @@ void PrunedBFS::run(node v, bool searchForward) {
 					visited[w] = true;
 					distances[w] = distances[u] + 1;
 					parents[w] = nodeToRank[u];
+					//(v,u) not far apart
+					relevant = false;
+				}else{
+					// w was visited but is in the (i+1)-th hierarchy level ----> (v,u) can not be far apart
+					if(distances[w] == distances[u]+1){
+						//(v, u) not far apart
+						relevant = false;
+					}
 				}
 			});
 		if(searchForward) {
 			G.forNeighborsOf(u, visit);
 		} else {
 			G.forInNeighborsOf(u, visit);
+		}
+
+		if(!relevant){
+			relPairs.set(v,u, false);
 		}
 	}
 

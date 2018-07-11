@@ -7,6 +7,7 @@
 
 #include "../../graph/Graph.h"
 #include "LandmarkLabel.h"
+#include "../../hyperbolicity/SymmetricMatrix.h"
 
 namespace NetworKit {
 
@@ -21,6 +22,7 @@ protected:
 	std::vector<LandmarkLabel> &backwardLabels;
 	std::vector<LandmarkLabel> *sourceLabels;
 	std::vector<LandmarkLabel> *targetLabels;
+	SymMatrix<bool, node> &relPairs;
 
 public:
 	/**
@@ -29,7 +31,7 @@ public:
 	* @param forwardlabel The labels used for forward search
 	* @ param backwardLabels The labels used for backward search
 	*/
-    PrunedSearch(const Graph &G, const std::vector<node> &nodeToRank, std::vector<LandmarkLabel> &forwardLabels, std::vector<LandmarkLabel> &backwardLabels);
+    PrunedSearch(const Graph &G, const std::vector<node> &nodeToRank, std::vector<LandmarkLabel> &forwardLabels, std::vector<LandmarkLabel> &backwardLabels, SymMatrix<bool,node> &relPairs);
 
     /** Default destructor */
     virtual ~PrunedSearch() = default;

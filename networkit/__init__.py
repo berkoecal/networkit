@@ -29,7 +29,7 @@ __credits__ = ["Lukas Barth", "Miriam Beddig", "Elisabetta Bergamini", "Stefan B
 	"Guido Brückner", "Mark Erb", "Patrick Flick", "Michael Hamann", "Lukas Hartmann", "Daniel Hoske", "Gerd Lindner", "Moritz v. Looz", "Yassine Marrakchi", "Henning Meyerhenke", \
 	"Marcel Radermacher", "Klara Reichard", "Marvin Ritter", "Aleksejs Sazonovs", "Florian Weber", "Michael Wegner", "Jörg Weisbarth", "Kolja Esders"]
 __license__ = "MIT"
-__version__ = "4.4"
+__version__ = "4.5"
 
 
 # standard library modules
@@ -107,7 +107,7 @@ def overview(G):
 		sequence = sorted(degrees)
 		i = 0
 		nIsolated = 0
-		while sequence[i] == 0 and i < len(sequence):
+		while i < len(sequence) and sequence[i] == 0:
 			nIsolated += 1
 			i += 1
 		return nIsolated

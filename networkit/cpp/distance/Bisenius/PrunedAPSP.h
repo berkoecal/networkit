@@ -8,6 +8,7 @@
 #include "LandmarkLabel.h"
 #include "../../distance/APSP.h"
 #include "../../graph/Graph.h"
+#include "../../hyperbolicity/SymmetricMatrix.h"
 
 
 namespace NetworKit {
@@ -66,6 +67,8 @@ public:
 	 */
 	virtual std::vector<std::vector<edgeweight>> getDistances();
 
+	virtual SymMatrix<bool, node>& getRelevantPairs();
+
 protected:
 	/**
 	 * The Query. Cuts two labels and returns the distance
@@ -98,8 +101,8 @@ protected:
 	std::vector<LandmarkLabel> *targetLabels;
     std::vector<node> nodeToRank;
     std::vector<node> rankToNode;
-	
 	PrunedAPSPNodeOrder nodeOrder;
+    SymMatrix<bool, node> relPairs;
 };
 
 } /* namespace NetworKit */

@@ -7,7 +7,7 @@
 #include "../../auxiliary/Timer.h"
 namespace NetworKit {
 
-PrunedAPSP::PrunedAPSP(const Graph& G, PrunedAPSPNodeOrder nodeOrder) : APSP(G), nodeOrder(nodeOrder) {}
+PrunedAPSP::PrunedAPSP(const Graph& G, PrunedAPSPNodeOrder nodeOrder) : APSP(G), nodeOrder(nodeOrder), relPairs(G.upperNodeIdBound(), true) {}
 
 void PrunedAPSP::run() {
 	auto maxNodeId = G.upperNodeIdBound();
@@ -30,9 +30,9 @@ void PrunedAPSP::run() {
 	// for weighted ones
     std::unique_ptr<PrunedSearch> prunedSearch;
     if(G.isWeighted()) {
-		prunedSearch.reset( new PrunedDijkstra(G, nodeToRank, *sourceLabels, *targetLabels));
+		prunedSearch.reset( new PrunedDijkstra(G, nodeToRank, *sourceLabels, *targetLabels, relPairs));
 	} else {
-    	prunedSearch.reset( new PrunedBFS(G, nodeToRank, *sourceLabels, *targetLabels));
+    	prunedSearch.reset( new PrunedBFS(G, nodeToRank, *sourceLabels, *targetLabels, relPairs));
 	}
 	
     count sumCounter=0;
@@ -234,6 +234,10 @@ void PrunedAPSP::orderNodes() {
 		nodeToRank[nodeId] = i;
 		rankToNode[i] = nodeId;
 	}
+}
+
+SymMatrix<bool, node>& PrunedAPSP::getRelevantPairs() {
+	return relPairs;
 }
 
 } /* namespace NetworKit */

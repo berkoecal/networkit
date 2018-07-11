@@ -38,11 +38,9 @@ def rankPerNode(ranking):
 	Parameters
 	----------
  	ranking: ordered list of tuples (node, score)
-
 	Returns
 	_______
 	for each node (sorted by node ID), the ranking of the node
-
 	"""
 	n_nodes = len(ranking)
 	ranking_id = [0]*n_nodes
@@ -63,20 +61,15 @@ def relativeRankErrors(rx, ry):
 	Let $r_x(u)$ be the rank of node $u$ in ranking $x$.
 	The relative rank error of node $u$ is defined as
 		$$r_x(u) / r_y(u)$$
-
-
 	Parameters
 	----------
 	rx : list
 		ranking - ordered list of tuples (node, score)
-
 	ry:  list
 		ranking - ordered list of tuples (node, score)
-
 	Returns
 	_______
 	list of rank errors ordered by node ID
-
 	"""
 	diff = []
 	n = len(rx)
@@ -97,14 +90,12 @@ class SpectralCentrality:
 	def __init__(self, G, normalized=False):
 		"""
 		Constructor.
-
 		Parameters
 		----------
 		G : graph
 			The graph of which to compute the centrality
 		normalized : boolean
 					 Whether to normalize the results or not
-
 		"""
 		super(SpectralCentrality, self).__init__()
 
@@ -157,14 +148,12 @@ class SpectralCentrality:
 class SciPyEVZ(SpectralCentrality):
 	"""
 	Compute Eigenvector centrality using algebraic meh
-
 	Parameters
 	----------
 	G : graph
 		The graph of which to compute the centrality
 	normalized : boolean
 				 Whether to normalize the results or not
-
 	"""
 	def __init__(self, G, normalized=False):
 		if G.isDirected():

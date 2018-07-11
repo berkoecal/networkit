@@ -3,7 +3,9 @@
  *       Created on: 18.11.2017
  *       Author: Berk Öcal
  */
+#define _BSD_SOURCE
 
+#include<sys/time.h>
 #include <cstdio>
 #include <ctime>
 #include "HyperbolicityGTest.h"
@@ -20,6 +22,7 @@
 #include "../../components/ConnectedComponents.h"
 #include "../../components/BiconnectedComponents.h"
 #include "../CustomizedAPSP.h"
+//#include "../../distance/Akiba/src/pruned_landmark_labeling.h"
 
 namespace NetworKit{
   TEST_F(HyperbolicityGTest, testHyperbolicity) {
@@ -107,6 +110,24 @@ namespace NetworKit{
     duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
   }
 
+  TEST_F(HyperbolicityGTest, testHyperbolicityCloseness) {
+	  auto get_wall_time = []()->double{
+		  struct timeval time;
+		  if(gettimeofday(&time, NULL)){
+			  return 0;
+		  }
+
+		  return (double) time.tv_sec + (double) time.tv_usec * .000001;
+	  };
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/032233cit-HepPh");
+	  double begin = get_wall_time();
+	  auto k = (G.numberOfNodes())*0.1;
+	  TopCloseness topK(G, k);
+	  topK.run();
+	  double end = get_wall_time();
+	  INFO("Topk-Closeness with ", k, " nodes took ", end-begin);
+  }
 
   TEST_F(HyperbolicityGTest, testHyperbolicityKONECT) {
 
@@ -124,7 +145,6 @@ namespace NetworKit{
   }
 
   TEST_F(HyperbolicityGTest, testHyperbolicitySNAP) {
-
 	  auto Reader = SNAPGraphReader();
 	  Graph G = Reader.read("input_borassi/032233cit-HepPh");
 
@@ -173,6 +193,348 @@ namespace NetworKit{
 
 	  INFO("Final Hyperbolicity over all connected components: ", maximum_seen);
 
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicitySNAP2) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/snap/Amazon0302.txt");
+
+	  BiconnectedComponents bcc(G);
+	  bcc.run();
+
+	  INFO("Number of biconnected comps: ", bcc.numberOfComponents());
+
+	  //compute hyperbolicity for each biconnected component and save maximum value among them
+	  double maximum_seen = 0.0;
+	  for(count i=0; i < bcc.numberOfComponents(); ++i){
+		  auto ith_comp = bcc.getComponents()[i];
+		  Graph component;
+
+		  std::vector<node> map(G.numberOfNodes());
+		  for(node u: ith_comp){
+			  node newNode = component.addNode();
+			  map[u]=newNode;
+		  }
+
+		  auto edges = G.edges();
+
+		  for(auto edge : edges){
+			  node first = edge.first;
+			  node second = edge.second;
+
+			  if(std::find(ith_comp.begin(), ith_comp.end(), first) != ith_comp.end() and
+				std::find(ith_comp.begin(), ith_comp.end(), second) != ith_comp.end()){
+				  component.addEdge(map[first], map[second]);
+			  }
+		  }
+
+		  if(component.numberOfNodes() > 1000){
+			  INFO("Anzahl der Knoten und Kanten der Komponente: ", component.numberOfNodes(), " und ", component.numberOfEdges());
+		  }
+
+		  Hyperbolicity hyperbolicity(component);
+		  hyperbolicity.run();
+		  double value = hyperbolicity.getHyperbolicity();
+
+		  if(value > maximum_seen){
+			  maximum_seen = value;
+		  }
+
+	  }
+
+	  INFO("Final Hyperbolicity over all connected components: ", maximum_seen);
+
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicitySNAP3) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/009577ca-AstroPh");
+
+	  BiconnectedComponents bcc(G);
+	  bcc.run();
+
+	  INFO("Number of biconnected comps: ", bcc.numberOfComponents());
+
+	  //compute hyperbolicity for each biconnected component and save maximum value among them
+	  double maximum_seen = 0.0;
+	  for(count i=0; i < bcc.numberOfComponents(); ++i){
+		  auto ith_comp = bcc.getComponents()[i];
+		  Graph component;
+
+		  std::vector<node> map(G.numberOfNodes());
+		  for(node u: ith_comp){
+			  node newNode = component.addNode();
+			  map[u]=newNode;
+		  }
+
+		  auto edges = G.edges();
+
+		  for(auto edge : edges){
+			  node first = edge.first;
+			  node second = edge.second;
+
+			  if(std::find(ith_comp.begin(), ith_comp.end(), first) != ith_comp.end() and
+				std::find(ith_comp.begin(), ith_comp.end(), second) != ith_comp.end()){
+				  component.addEdge(map[first], map[second]);
+			  }
+		  }
+
+		  if(component.numberOfNodes() > 4){
+			  INFO("Anzahl der Knoten und Kanten der Komponente: ", component.numberOfNodes(), " und ", component.numberOfEdges());
+		  }
+
+		  Hyperbolicity hyperbolicity(component);
+		  hyperbolicity.run();
+		  double value = hyperbolicity.getHyperbolicity();
+
+		  if(value > maximum_seen){
+			  maximum_seen = value;
+		  }
+
+	  }
+
+	  INFO("Final Hyperbolicity over all connected components: ", maximum_seen);
+
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicitySNAP4) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/045425soc-Slashdot0811");
+
+	  BiconnectedComponents bcc(G);
+	  bcc.run();
+
+	  INFO("Number of biconnected comps: ", bcc.numberOfComponents());
+
+	  //compute hyperbolicity for each biconnected component and save maximum value among them
+	  double maximum_seen = 0.0;
+	  for(count i=0; i < bcc.numberOfComponents(); ++i){
+		  auto ith_comp = bcc.getComponents()[i];
+		  Graph component;
+
+		  std::vector<node> map(G.numberOfNodes());
+		  for(node u: ith_comp){
+			  node newNode = component.addNode();
+			  map[u]=newNode;
+		  }
+
+		  auto edges = G.edges();
+
+		  for(auto edge : edges){
+			  node first = edge.first;
+			  node second = edge.second;
+
+			  if(std::find(ith_comp.begin(), ith_comp.end(), first) != ith_comp.end() and
+				std::find(ith_comp.begin(), ith_comp.end(), second) != ith_comp.end()){
+				  component.addEdge(map[first], map[second]);
+			  }
+		  }
+
+		  if(component.numberOfNodes() > 4){
+			  INFO("Anzahl der Knoten und Kanten der Komponente: ", component.numberOfNodes(), " und ", component.numberOfEdges());
+		  }
+
+		  Hyperbolicity hyperbolicity(component);
+		  hyperbolicity.run();
+		  double value = hyperbolicity.getHyperbolicity();
+
+		  if(value > maximum_seen){
+			  maximum_seen = value;
+		  }
+
+	  }
+
+	  INFO("Final Hyperbolicity over all connected components: ", maximum_seen);
+
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/004527p2p-Gnutella08");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
+
+	  INFO("Final Hyperbolicity over all connected components: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe2) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/004583wiki-Vote");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
+
+	  INFO("Final Hyperbolicity over all connected components: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe3) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/004667oregon2_010331");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
+
+	  INFO("Final Hyperbolicity over all connected components: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe4) {
+
+  	  auto Reader = SNAPGraphReader();
+  	  Graph G = Reader.read("input_borassi/008362p2p-Gnutella04");
+  	  Hyperbolicity hyperbolicity(G);
+  	  hyperbolicity.run();
+  	  double value = hyperbolicity.getHyperbolicity();
+
+  	  INFO("Final Hyperbolicity over all connected components: ", value);
+    }
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe5) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/008773ca-CondMat");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
+
+	  INFO("Final Hyperbolicity over all connected components: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe6) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/009577ca-AstroPh");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
+
+	  INFO("Final Hyperbolicity over all connected components: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe7) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/009710ASEdges10_2011.edgelist");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
+
+	  INFO("Final Hyperbolicity over all connected components: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe8) {
+
+  	  auto Reader = SNAPGraphReader();
+  	  Graph G = Reader.read("input_borassi/010969email-Enron");
+  	  Hyperbolicity hyperbolicity(G);
+  	  hyperbolicity.run();
+  	  double value = hyperbolicity.getHyperbolicity();
+
+  	  INFO("Final Hyperbolicity over all connected components: ", value);
+    }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe9) {
+
+  	  auto Reader = SNAPGraphReader();
+  	  Graph G = Reader.read("input_borassi/013301p2p-Gnutella25");
+  	  Hyperbolicity hyperbolicity(G);
+  	  hyperbolicity.run();
+  	  double value = hyperbolicity.getHyperbolicity();
+
+  	  INFO("Final Hyperbolicity over all connected components: ", value);
+    }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe10) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/015549as_20100120.caida");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
+
+	  INFO("Final Hyperbolicity over all connected components: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe11) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/022153email-EuAll");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
+
+	  INFO("Final Hyperbolicity over all connected components: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe12) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/020095p2p-Gnutella30");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
+
+	  INFO("Final Hyperbolicity over all connected components: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe13) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/024982cit-HepTh");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
+
+	  INFO("Final Hyperbolicity over all connected components: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe14) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/030935soc-Epinions1");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
+
+	  INFO("Final Hyperbolicity over all connected components: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe15) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/032233cit-HepPh");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
+
+	  INFO("Final Hyperbolicity over all connected components: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe16) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/045425soc-Slashdot0811");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
+
+	  INFO("Final Hyperbolicity over all connected components: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe17) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/050219soc-sign-epinions");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
+
+	  INFO("Final Hyperbolicity over all connected components: ", value);
   }
 
   TEST_F(HyperbolicityGTest, testHyperbolicityDistCheck) {
@@ -244,6 +606,13 @@ namespace NetworKit{
 
   }
 
+//  TEST_F(HyperbolicityGTest, testAKIBA) {
+////	  auto Reader = SNAPGraphReader();
+////	  Graph G = Reader.read("input_borassi/045425soc-Slashdot0811");
+//	  PrunedLandmarkLabeling<> pll;
+//	  pll.ConstructIndex(samples/graph_example.tsv);
+//	  cout << pll.QueryDistance(1, 4) << endl;
+//  }
 
   TEST_F(HyperbolicityGTest, testHyperbolicity2) {
     
@@ -361,20 +730,6 @@ namespace NetworKit{
    }
 
   TEST_F(HyperbolicityGTest, testCustomizedAPSP2){
-	 int n = 3;
-	 Graph G(n);
-	 G.addEdge(0,1);
-	 G.addEdge(0,2);
 
-	 CustomizedAPSP cAPSP(G);
-	 cAPSP.run();
-
-	 SymMatrix<bool, node> sym_matrix = cAPSP.getRelevantPairs();
-
-	 for(size_t i=0; i < sym_matrix.size(); ++i){
-		 for(size_t j=0; j < sym_matrix.size(); ++j){
-			 INFO("(",i ,",", j, "):", sym_matrix.element(i,j));
-		 }
-	 }
   }
 }

@@ -19,6 +19,7 @@
 #include "../../centrality/DegreeCentrality.h"
 #include "../../io/METISGraphReader.h"
 #include "../../io/SNAPGraphReader.h"
+#include "../PrunedLabeling.h"
 
 namespace NetworKit {
   
@@ -80,6 +81,23 @@ TEST_F(PrunedAPSPGTest, testPrunedAPSPFarApart) {
 	INFO("n= ", G.numberOfNodes());
 	INFO("m= ", G.numberOfEdges());
 
+}
+
+TEST_F(PrunedAPSPGTest, testPrunedLabeling){
+	auto Reader = METISGraphReader();
+	Graph G = Reader.read("input/power.graph");
+
+	APSP apsp(G);
+	apsp.run();
+
+	 PrunedLabeling<> pll(G);
+	 pll.ConstructIndex();
+
+	 for(node v=0; v < G.numberOfNodes(); ++v){
+		 for(node u=v+1; u < G.numberOfNodes(); ++u){
+			 EXPECT_TRUE(apsp.getDistance(u,v) == pll.QueryDistance(u,v));
+		 }
+	 }
 }
 
 TEST_F(PrunedAPSPGTest, testPrunedAPSP2) {

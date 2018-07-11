@@ -3,7 +3,7 @@
 
 namespace NetworKit {
 
-PrunedDijkstra::PrunedDijkstra(const Graph &G, const std::vector<node> &nodeToRank, std::vector<LandmarkLabel> &forwardLabels, std::vector<LandmarkLabel> &backwardLabels) : PrunedSearch(G, nodeToRank, forwardLabels, backwardLabels) {}
+PrunedDijkstra::PrunedDijkstra(const Graph &G, const std::vector<node> &nodeToRank, std::vector<LandmarkLabel> &forwardLabels, std::vector<LandmarkLabel> &backwardLabels, SymMatrix<bool, node> &relPairs) : PrunedSearch(G, nodeToRank, forwardLabels, backwardLabels, relPairs) {}
 
 void PrunedDijkstra::run(node source, bool searchForward) {
 	std::vector<node> visited_nodes;
