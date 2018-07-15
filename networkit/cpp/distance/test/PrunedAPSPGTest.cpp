@@ -22,9 +22,9 @@
 #include "../PrunedLabeling.h"
 
 namespace NetworKit {
-  
+
 TEST_F(PrunedAPSPGTest, testPrunedAPSP) {
-    
+
 	//Graph of Paper Akiba et al.
 	int n = 12;
 	Graph G(n);
@@ -47,20 +47,20 @@ TEST_F(PrunedAPSPGTest, testPrunedAPSP) {
 	G.addEdge(6,8);
 	G.addEdge(8,11);
 	G.addEdge(9,10);
-	
+
 	APSP usual(G);
 	usual.run();
 	DEBUG("APSP-Result for (6,11): ", usual.getDistance(5,10));
 	DEBUG("APSP-Result for (2,11): ", usual.getDistance(1,10));
 	DEBUG("APSP-Result for (8,2): ", usual.getDistance(7,2));
-	DEBUG("APSP-Result for (4,9): ", usual.getDistance(3,8));	
+	DEBUG("APSP-Result for (4,9): ", usual.getDistance(3,8));
 	PrunedAPSP pruned(G);
 	pruned.run();
 	DEBUG("APSPPruned-Result for (6,11): ", pruned.getDistance(5,10));
 	DEBUG("APSPPruned-Result for (2,11): ", pruned.getDistance(1,10));
 	DEBUG("APSPPruned-Result for (8,2): ", pruned.getDistance(7,2));
 	DEBUG("APSPPruned-Result for (4,9): ", pruned.getDistance(3,8));
-	
+
 	EXPECT_TRUE(pruned.getDistance(3,7) == usual.getDistance(3,7));
 }
 
@@ -178,24 +178,24 @@ TEST_F(PrunedAPSPGTest, testPrunedAPSP2) {
 }
 
 TEST_F(PrunedAPSPGTest, testPrunedAPSP3) {
-  
+
 	auto Reader = METISGraphReader();
 	Graph G = Reader.read("input/astro-ph.graph");
-	
+
 	std::clock_t start2;
 	double duration2;
 	start2 = std::clock();
-	
+
 	APSP usual(G);
-	usual.run();	
+	usual.run();
 	duration2 = (std::clock() - start2) / (double) CLOCKS_PER_SEC;
-	
+
 	INFO("Time of APSP: ", duration2);
-	
+
 	std::clock_t start;
-	double duration;	
+	double duration;
 	start = std::clock();
-	
+
 	PruningAPSP pruned(G);
 	pruned.runParallel();
 	INFO("PrunedAPSP (parallel) has run! Next compute distances...");
@@ -204,30 +204,30 @@ TEST_F(PrunedAPSPGTest, testPrunedAPSP3) {
 	    EXPECT_TRUE(pruned.getDistance(u,v)==usual.getDistance(u,v));
 	  }
 	}
-	
+
 	duration = (std::clock() - start) / (double) CLOCKS_PER_SEC;
-	
+
 	INFO(" Time of PrunedAPSP(parallel): ", duration);
-  
- 	
+
+
 }
 
 TEST_F(PrunedAPSPGTest, testPrunedAPSP4) {
   auto Reader = METISGraphReader();
   Graph G = Reader.read("input/astro-ph.graph");
-  
+
   std::clock_t start2;
   double duration2;
   start2 = std::clock();
-  
+
   APSP usual(G);
   usual.run();
-  
+
   duration2 = (std::clock() - start2) / (double) CLOCKS_PER_SEC;
-  
+
   INFO("Time of APSP: ", duration2);
-  
-  
+
+
   for(node const u: G.nodes()){
     for(node const v: G.nodes()){
       EXPECT_TRUE(usual.getDistance(u,v) == usual.getDistance(u,v));

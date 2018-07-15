@@ -71,6 +71,7 @@ void Hyperbolicity::run(){
 	}
 }
 
+
 void Hyperbolicity::HYP_AKIBA(){
 
 	auto get_wall_time = []()->double{
@@ -83,13 +84,20 @@ void Hyperbolicity::HYP_AKIBA(){
 	};
 
 
-
 	/*******************************************************************************/
 	/* PREPROCESSING                                                             */
 	/*******************************************************************************/
 	double startALL = get_wall_time();
 	edgeweight inf = std::numeric_limits<edgeweight>::max();
 	count n = G.numberOfNodes();
+
+	/*
+	 * This part corresponds to the selection of landmarks
+	 * and the construction of upper bounds.
+	 * @param k: number of landmarks
+	 * @param maxComp: limit for U', i.e. it decided how many comparisons U' is allowed to make.
+	 * @param CentralNodeMethod: can be picked as GROUPDEGREE, TOPCLOSENESS, RANDOM and DEGREE.
+	 */
 	count numOfCentralNodes = ceil(n*0.1);
 	auto k = std::min(n, numOfCentralNodes);
 	auto maxComp = std::min(numOfCentralNodes, (count) 20);
@@ -97,26 +105,16 @@ void Hyperbolicity::HYP_AKIBA(){
 	INFO("n=", n, " m=", G.numberOfEdges());
 
 	double start = get_wall_time();
-	//Upper bounds
 	CustomizedAPSP customAPSP(G, k, maxComp, CentralNodeMethod::GROUPDEGREE);
 	customAPSP.run();
 	double end = get_wall_time();
 
 	SymMatrix<bool, node> const& relPairsFromCAPSP = customAPSP.getRelevantPairs();
 	SymMatrix<edgeweight, node>& distances = customAPSP.getDistances(); // stores exact distances
-	std::vector<edgeweight>& farnessToPivs = customAPSP.getFarnessVec();
-
-
-	//Comparison methods
-
-	auto farness_comp = [&](NodeTupleWithDist const& a, NodeTupleWithDist const& b)-> bool {
-		edgeweight res = a.distance() - b.distance();
-		if(res == 0){
-			edgeweight diff = farnessToPivs[a.index_a()] + farnessToPivs[a.index_b()] - farnessToPivs[b.index_a()] - farnessToPivs[b.index_b()];
-			return diff <= 0;
-		}
-		return res > 0;
-	};
+	/*
+	 * These are comparison methods to sort the list of pairs P.
+	 * If distances (or bounds) are equal, one can apply further ordering strategies.
+	 */
 
 	auto lex_comp = [](NodeTupleWithDist const& a, NodeTupleWithDist const& b)-> bool {
 		edgeweight res = a.distance() - b.distance();
@@ -160,10 +158,7 @@ void Hyperbolicity::HYP_AKIBA(){
 		}
 		return res > 0;
 	};
-
-	//auto ordered_tuples = std::set<NodeTupleWithDist, decltype(lex_comp)>(lex_comp);
 	std::vector<NodeTupleWithDist> ordered_tuples;
-	ordered_tuples.reserve(G.numberOfNodes()*(G.numberOfNodes()-1)/2);
 
 	//Akiba
 	std::clock_t start_preproc;
@@ -184,6 +179,7 @@ void Hyperbolicity::HYP_AKIBA(){
 	INFO("Time of central node computation: ", endCentral-startCentral);
 	INFO("Time of Preprocessing Pruned: ", duration_preproc);
 	}
+
 	//This will be not necessary once the getDistances method in topCloseness is implemented
 	BFS bfs(G, central_node);
 	bfs.run();
@@ -218,29 +214,6 @@ void Hyperbolicity::HYP_AKIBA(){
 //		}
 //	}
 
-/*
- * AS USUAL
- */
-//	double startFirstLoop = get_wall_time();
-//	for(node u=0; u < G.numberOfNodes(); ++u){
-//		for(node v = u; v < G.numberOfNodes(); ++v){
-//			if(relPairsFromCAPSP.element(u,v)){
-//				capspRelPairs++;
-//			}
-//			edgeweight dist = customAPSP.getDistance(u,v); //FEHLER VLLT HIER
-//			if(relPairsFromCAPSP.element(u,v)){
-//				if(dist == inf){
-//					dist = customAPSP.distUpperBoundAdvanced(u,v);
-//					ordered_tuples.emplace(u,v,dist);
-//				}else{
-//					ordered_tuples.emplace(u,v, dist);
-//				}
-//			}
-//		}
-//	}
-//	double endFirstLoop = get_wall_time();
-//	INFO(endFirstLoop - startFirstLoop);
-
 	for(node u=0; u < G.numberOfNodes(); ++u){
 		for(node v = u; v < G.numberOfNodes(); ++v){
 			if(relPairsFromCAPSP.element(u,v)){
@@ -250,6 +223,7 @@ void Hyperbolicity::HYP_AKIBA(){
 			if(relPairsFromCAPSP.element(u,v)){
 				if(dist == inf){
 					dist = customAPSP.distUpperBoundAdvanced(u,v);
+					//dist = customAPSP.distUpperBoundByComp(u,v);
 					ordered_tuples.emplace_back(u,v,dist);
 				}else{
 					ordered_tuples.emplace_back(u,v, dist);
@@ -271,15 +245,29 @@ void Hyperbolicity::HYP_AKIBA(){
 	 * LAMBDA EXPRESSIONS
 	 ****************************************************************************/
 
-	auto exact_dist = [&](node v, node w) -> edgeweight{
 
+	auto numProperQueries = 0;
+	auto numTotalQueries = 0;
+	double sumQueryTimes = 0;
+	/*
+	 * This method realizes Option A and B. Currently it applies Option A
+	 * storing distances that are already queried.
+	 * We can easily count the number of total queries and the number of proper queries, i.e.
+	 * not taking repetitions into account. To count the number or time of (proper) queries,
+	 * uncomment the corresponding variables.
+	 */
+	auto exact_dist = [&](node v, node w) -> edgeweight{
+		//numTotalQueries++;
 		if(distances.element(v,w) != inf){
 			return distances.element(v,w);
 		}
+		//double startQ = get_wall_time();
 		double dist = pruned.QueryDistance(v,w);
+		//double endQ = get_wall_time();
+		//numProperQueries++;
 		distances.set(v,w, dist);
+		//sumQueryTimes += (endQ - startQ);
 		return dist;
-		return pruned.QueryDistance(v,w);
 	};
 
 
@@ -289,9 +277,13 @@ void Hyperbolicity::HYP_AKIBA(){
 
 
 	double h_diff = 0.0;
-	std::set<node> was_seen;
+	std::vector<bool> was_seen(G.numberOfNodes(), false);
+	std::vector<node> nodesToConsider(G.numberOfNodes());
+	size_t nodesToConsiderCounter = 0;
+	double wasSeenTime = 0;
+	double accValTime = 0;
 	std::vector<std::vector<node>> mate(n);
-	std::vector<edgeweight> largestDistToMates(n);
+	std::vector<edgeweight> largestDistToMates(n,0);
 
 	/* NEW */
 	std::vector<bool> acceptable(n, 0);
@@ -325,18 +317,34 @@ void Hyperbolicity::HYP_AKIBA(){
 
 		mate[x].push_back(y);
 		mate[y].push_back(x);
-		if(largestDistToMates[x] < distXY){
-			largestDistToMates[x] = distXY;
+
+		largestDistToMates[x] = std::max(largestDistToMates[x], distXY);
+		largestDistToMates[y] = std::max(largestDistToMates[y], distXY);
+
+		if(!(was_seen[x])){
+			was_seen[x] = true;
+			nodesToConsider[nodesToConsiderCounter++] = x;
 		}
-		if(largestDistToMates[y] < distXY){
-			largestDistToMates[y] = distXY;
+
+		if(!(was_seen[y])){
+			was_seen[y] = true;
+			nodesToConsider[nodesToConsiderCounter++] = y;
 		}
-		was_seen.insert(x);
-		was_seen.insert(y);
+
+		/*	Implements the measurement of
+		 *  \phi_i and \gamma_i
+		 */
+
+//		static size_t debugCounter = 0;
+//		INFO("Ratio", nodesToConsiderCounter/ (double) n,
+//		" Progress: ", "ordered_tuples size: ", ordered_tuples.size(),
+//		" debugCounter: ",debugCounter," Ratio: ",debugCounter++/ (double) ordered_tuples.size());
 
 		/*************************************************************************
 		 * Computation of acceptable and valuable nodes
 		 ************************************************************************/
+
+		double startAccVal = get_wall_time();
 
 		auto hdiffPlusOne = h_diff + 1;
 		count numberOfValNodes = 0;
@@ -347,38 +355,39 @@ void Hyperbolicity::HYP_AKIBA(){
 		if(condacc1 > 0){
 			// see Lemma 9: if 3delta_L + 3/2 < d(x,y) or equivalently 3*h_diff+3 < 2*d(x,y) then by Lemma 9 node v is already NOT skippable
 			//Lemma5
-			for(auto const v: was_seen){
-				//Lemma 9 (1) with bounds and exact distances
-				if(2*(largestDistToMates[v] - std::max(exact_dist(x,v),exact_dist(y,v))) >= condacc1){
-					//Lemma 9 (2) with bounds and exact distances
-					//if(2*(largestDistToMates[v] - exact_dist(y,v)) >= condacc1){
-						//Corollary 7 with bounds and exact distances
-						if((2*exact_dist(x,v) >= hdiffPlusOne) and (2*exact_dist(y,v) >= hdiffPlusOne)){
-							//Lemma 8 with bounds and exact distances
-							if(2*largestDistToMates[v] - exact_dist(x,v) - exact_dist(y,v) >= condacc2){
-								//node v is acceptable!
-								acceptable[v] = true;
-								//check if valuable
-								if(condval + 2*distC[v] > exact_dist(x,v) + exact_dist(y,v)){
-									valuable[numberOfValNodes] = v;
-									numberOfValNodes++;
-								}
+			for(size_t i=0; i < nodesToConsiderCounter; ++i){
+				node v = nodesToConsider[i];
+				//Lemma 9 with exact distances
+				edgeweight distXV = exact_dist(x,v);
+				edgeweight distYV = exact_dist(y,v);
+				if(2*(largestDistToMates[v] - std::max(distXV,distYV)) >= condacc1){
+					//Corollary 7 with exact distances
+					if((2*distXV >= hdiffPlusOne) and (2*distYV >= hdiffPlusOne)){
+						//Lemma 8 with exact distances
+						if(2*largestDistToMates[v] - distXV - distYV >= condacc2){
+							//node v is acceptable!
+							acceptable[v] = true;
+							//check if valuable
+							if(condval + 2*distC[v] > distXV + distYV){
+								valuable[numberOfValNodes++] = v;
 							}
 						}
-					//}
+					}
 				}
 			}
 		}else{
-			for(auto const v: was_seen){
-				//Corollary 7 with bounds and exact distances
-				if((2*exact_dist(x,v) >= hdiffPlusOne) and (2*exact_dist(y,v) >= hdiffPlusOne)){
-					//Lemma 8 with bounds and exact distances
-					if(2*largestDistToMates[v] - exact_dist(x,v) - exact_dist(y,v) >= condacc2){
+			for(size_t i=0; i < nodesToConsiderCounter; ++i){
+				node v = nodesToConsider[i];
+				edgeweight distXV = exact_dist(x,v);
+				edgeweight distYV = exact_dist(y,v);
+				//Corollary 7 with exact distances
+				if((2*distXV >= hdiffPlusOne) and (2*distYV >= hdiffPlusOne)){
+					//Lemma 8 with exact distances
+					if(2*largestDistToMates[v] - distXV - distYV >= condacc2){
 						acceptable[v] = true;
 						//check if valuable
-						if(condval + 2*distC[v] > exact_dist(x,v) + exact_dist(y,v)){
-							valuable[numberOfValNodes] = v;
-							numberOfValNodes++;
+						if(condval + 2*distC[v] > distXV + distYV){
+							valuable[numberOfValNodes++] = v;
 						}
 					}
 				}
@@ -386,7 +395,10 @@ void Hyperbolicity::HYP_AKIBA(){
 		}
 
 		/*
-		 * Version with upper bounds
+		 * For Option B: Version with upper bounds
+		 * This version of valuable and acceptable node computation seems to be unfeasible
+		 * due to less exclusions by upper bounds. Better use the computation scheme above.
+		 * In the thesis both versions are presented.
 		 */
 
 //		if(condacc1 > 0){
@@ -395,22 +407,18 @@ void Hyperbolicity::HYP_AKIBA(){
 //			for(auto const v: was_seen){
 //				auto boundXV = customAPSP.distUpperBoundAdvanced(x,v);
 //				auto boundYV = customAPSP.distUpperBoundAdvanced(y,v);
-//				//Lemma 9 (1) with bounds and exact distances
-//				if(2*(largestDistToMates[v] - boundXV) >= condacc1){
-//					//Lemma 9 (2) with bounds and exact distances
-//					if(2*(largestDistToMates[v] - boundYV) >= condacc1){
-//						//Corollary 7 with bounds and exact distances
-//						if((2*boundXV >= hdiffPlusOne)
-//								and (2*boundYV >= hdiffPlusOne)){
-//							//Lemma 8 with bounds and exact distances
-//							if((2*largestDistToMates[v] - boundXV - boundYV >= condacc2)){
-//								//node v is acceptable!
-//								acceptable[v] = true;
-//								//check if valuable
-//								if(condval + 2*distC[v] > boundXV + boundYV){
-//									valuable[numberOfValNodes] = v;
-//									numberOfValNodes++;
-//								}
+//				if((2*boundXV >= hdiffPlusOne) and (2*boundYV >= hdiffPlusOne)){
+//					if((2*(largestDistToMates[v] - std::max(boundXV, boundYV)) >= condacc1)
+//							or (2*(largestDistToMates[v] - std::max(exact_dist(x,v), exact_dist(y,v))) >= condacc1)){
+//						if((2*largestDistToMates[v] - boundXV - boundYV >= condacc2)
+//								or (2*largestDistToMates[v] - exact_dist(x,v) - exact_dist(y,v) >= condacc2)){
+//							//node v is acceptable!
+//							acceptable[v] = true;
+//							//check if valuable
+//							if(condval + 2*distC[v] > boundXV + boundYV
+//									or condval + 2*distC[v] > exact_dist(x,v) + exact_dist(y,v)){
+//								valuable[numberOfValNodes] = v;
+//								numberOfValNodes++;
 //							}
 //						}
 //					}
@@ -423,10 +431,12 @@ void Hyperbolicity::HYP_AKIBA(){
 //				//Corollary 7 with bounds and exact distances
 //				if((2*boundXV >= hdiffPlusOne) and (2*boundYV >= hdiffPlusOne)){
 //					//Lemma 8 with bounds and exact distances
-//					if(2*largestDistToMates[v] - boundXV - boundYV >= condacc2){
+//					if(2*largestDistToMates[v] - boundXV - boundYV >= condacc2
+//							or 2*largestDistToMates[v] - exact_dist(x,v) - exact_dist(y,v) >= condacc2){
 //						acceptable[v] = true;
 //						//check if valuable
-//						if(condval + 2*distC[v] > boundXV + boundYV){
+//						if(condval + 2*distC[v] > boundXV + boundYV
+//								or condval + 2*distC[v] > exact_dist(x,v) + exact_dist(y,v) ){
 //							valuable[numberOfValNodes] = v;
 //							numberOfValNodes++;
 //						}
@@ -435,16 +445,18 @@ void Hyperbolicity::HYP_AKIBA(){
 //			}
 //		}
 
+		double endAccVal = get_wall_time();
+		accValTime += (endAccVal - startAccVal);
+
 		//----------------------------------------------------------------------------------------
 
 		for(auto i=0; i < numberOfValNodes; ++i){
 			const node v = valuable[i];
 			for(const node w: mate[v]){
 				if(acceptable[w]){
-					double S1 = distXY + exact_dist(v,w);
 					double S2 = exact_dist(x,v) + exact_dist(y,w);
 					double S3 = exact_dist(x,w) + exact_dist(y,v);
-					double largest_diff = S1 - std::max(S2,S3);
+					double largest_diff = distXY + exact_dist(v,w) - std::max(S2, S3);
 					quadtruples_visited++;
 					if(h_diff < largest_diff){
 						best_x = x;
@@ -473,13 +485,17 @@ void Hyperbolicity::HYP_AKIBA(){
 	Ende:
 	duration_main = (std::clock() - start_main) / (double) CLOCKS_PER_SEC;
 	if(G.numberOfNodes() >= 1000){
-	INFO("Laufzeit vom Hauptblock:", duration_main);
-	INFO("Number of pairs considered (Abortion Position): ", iteration);
+	INFO("Running time of main part:", duration_main);
+	INFO("Number of proper queries: ", numProperQueries);
+	INFO("Number of total queries: ", numTotalQueries);
+	INFO("Total running time of all queries (Akiba): ", sumQueryTimes);
+	INFO("AccVal time: ", accValTime);
+	INFO("Abortion Position (iteration): ", iteration);
 	INFO("First quadtrupel attaining maximum:", "(",best_x,",",best_y,",",best_v, ",",best_w, ") with iteration position of (x,y) at ", position_of_best, "/", ordered_tuples.size(),
 			" and distances d(x,y)= ", exact_dist(best_x,best_y), ", d(v,w)= ", exact_dist(best_v,best_w),
 			", d(x,v)= ",exact_dist(best_x,best_v), ", d(y,w)= ", exact_dist(best_y, best_w),
 			", d(x,w)= ",exact_dist(best_x,best_w), ", d(y,v)= ", exact_dist(best_y,best_v));
-	INFO("Quadtruples visited: ", quadtruples_visited);
+	INFO("Tuples visited: ", quadtruples_visited);
 	INFO("h_diff: ", h_diff);
 	INFO("Hyperbolicity: ", h_diff/2);
 
@@ -488,6 +504,8 @@ void Hyperbolicity::HYP_AKIBA(){
 	}
 	hyperbolicity_value = h_diff/2;
 }
+
+
 
 void Hyperbolicity::HYP(){
 	auto get_wall_time = []()->double{
@@ -561,14 +579,9 @@ void Hyperbolicity::HYP(){
 
 	//Note: farness_comp causes additional time overhead in the tuple construction phase
 	//		since it conducts additional comparisons if distances are the same.
-	auto ordered_tuples = std::set<NodeTupleWithDist, decltype(lex_comp)>(lex_comp);
+	//auto ordered_tuples = std::set<NodeTupleWithDist, decltype(lex_comp)>(lex_comp);
+	std::vector<NodeTupleWithDist> ordered_tuples;
 	//std::vector<NodeTupleWithDist> ordered_tuples;
-
-	std::vector<node> arrangement = G.nodes();
-	//arrange nodes by increasing farness
-//	std::sort(arrangement.begin(), arrangement.end(), [&](node u, node v) {
-//		return farness[u] <= farness[v];
-//	});
 
 	//Tuple construction
 	double startTuples = get_wall_time();
@@ -576,10 +589,11 @@ void Hyperbolicity::HYP(){
 	for(node u=0; u < G.numberOfNodes(); ++u){
 		for(node v = u; v < G.numberOfNodes(); ++v){
 			if(relevantPairs.element(u,v)){
-				ordered_tuples.emplace(u,v, distances.element(u,v));
+				ordered_tuples.emplace_back(u,v, distances.element(u,v));
 			}
 		}
 	}
+	std::sort(ordered_tuples.begin(), ordered_tuples.end(), lex_comp);
 
 	//std::sort(ordered_tuples.begin(), ordered_tuples.end(), farness_comp);
 

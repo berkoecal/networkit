@@ -33,10 +33,11 @@ class CustomizedAPSP{
 public:
 	/*
 	 * The constructor requires a list of nodes it applies BFS for.
-	 * If the list of @param centralNodes is a proper subset of all nodes,
-	 *  the algorithm computes upper bounds for pairs not considered in the BFS searchs that have been run.
-	 * Else, it computes exact distances.
+	 * If the list of @param centralNodes is not a proper subset of all nodes,
+	 * the algorithm computes exact distances.
+	 * Moreover, it stores all distances that it has computed.
 	 */
+
 	CustomizedAPSP(const Graph& G, CentralNodeMethod method = CentralNodeMethod::NATURAL);
 	CustomizedAPSP(const Graph& G, count numberOfLandmarks, count maxComparisons, CentralNodeMethod method = CentralNodeMethod::DEGREE);
 	virtual void run();
@@ -44,9 +45,16 @@ public:
 	SymMatrix<edgeweight, node> const& getExactDistances();
 	SymMatrix<edgeweight, node>& getDistances();
 	edgeweight getDistance(node u, node v);
+
+	/*
+	 * This upper bound method corresponds to U
+	 */
 	edgeweight distUpperBoundByComp(node u, node v);
 	edgeweight distLowerBoundByComp(node u, node v);
 	edgeweight distUpperBound(node u, node v);
+	/*
+	 * This upper bound method corresponds to U'
+	 */
 	edgeweight distUpperBoundAdvanced(node u, node v);
 	edgeweight distLowerBoundAdvanced(node u, node v);
 	std::vector<edgeweight>& getEccentricityVec();

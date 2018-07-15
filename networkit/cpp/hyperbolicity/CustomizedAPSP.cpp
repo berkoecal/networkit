@@ -50,7 +50,6 @@ CustomizedAPSP::CustomizedAPSP(const Graph& G, const count numberOfLandmarks, co
 
 void CustomizedAPSP::run(){
 	computeCentralNodes();
-
 	//#pragma omp parallel for
 	for(auto i = 0; i < pivots.size(); ++i){
 		const node source = pivots[i];

@@ -22,6 +22,7 @@
 #include "../../components/ConnectedComponents.h"
 #include "../../components/BiconnectedComponents.h"
 #include "../CustomizedAPSP.h"
+#include "../../distance/Diameter.h"
 //#include "../../distance/Akiba/src/pruned_landmark_labeling.h"
 
 namespace NetworKit{
@@ -351,7 +352,7 @@ namespace NetworKit{
 
   }
 
-  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe) {
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe1) {
 
 	  auto Reader = SNAPGraphReader();
 	  Graph G = Reader.read("input_borassi/004527p2p-Gnutella08");
@@ -537,82 +538,840 @@ namespace NetworKit{
 	  INFO("Final Hyperbolicity over all connected components: ", value);
   }
 
-  TEST_F(HyperbolicityGTest, testHyperbolicityDistCheck) {
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe18) {
 
-	auto Reader = METISGraphReader();
-	Graph G = Reader.read("input/power.graph");
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/004950ca-HepPh");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
 
-//	Graph G(8);
-//	G.addEdge(0,1);
-//	G.addEdge(0,2);
-//	G.addEdge(1,3);
-//	G.addEdge(1,4);
-//	G.addEdge(2,5);
-//	G.addEdge(3,6);
-//	G.addEdge(3,7);
+	  INFO("Final Hyperbolicity over all connected components: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityAbgabe19) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/003702ca-HepTh");
+	  Hyperbolicity hyperbolicity(G);
+	  hyperbolicity.run();
+	  double value = hyperbolicity.getHyperbolicity();
+
+	  INFO("Final Hyperbolicity over all connected components: ", value);
+  }
 
 
-	int errors=0;
-	int errorsForLargeDistances;
-	double errorSum=0.0;
-	double errorSumForLargeDistances=0.0;
-	double relativeError=0.0;
-	double relativeErrorForLargeDistances=0.0;
+/*
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe1) {
 
-	std::clock_t start2;
-	double duration_cAPSP;
-	start2 = std::clock();
-	//CustomizedAPSP cAPSP(G, topk.topkNodesList());
-	count k = 1000;
-	count maxComp = 20;
-	CustomizedAPSP cAPSP(G, k, maxComp);
-	cAPSP.run();
-	duration_cAPSP = (std::clock() - start2) / (double) CLOCKS_PER_SEC;
-	INFO("Duration CustomizedAPSP with ",k, " nodes: ", duration_cAPSP);
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/004527p2p-Gnutella08");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+	  INFO("Diameter: ", value);
+  }
 
-	std::clock_t start;
-	double duration_apsp;
-	start = std::clock();
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe2) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/004583wiki-Vote");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe3) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/004667oregon2_010331");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe4) {
+
+  	  auto Reader = SNAPGraphReader();
+  	  Graph G = Reader.read("input_borassi/008362p2p-Gnutella04");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+    }
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe5) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/008773ca-CondMat");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe6) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/009577ca-AstroPh");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe7) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/009710ASEdges10_2011.edgelist");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe8) {
+
+  	  auto Reader = SNAPGraphReader();
+  	  Graph G = Reader.read("input_borassi/010969email-Enron");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+    }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe9) {
+
+  	  auto Reader = SNAPGraphReader();
+  	  Graph G = Reader.read("input_borassi/013301p2p-Gnutella25");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+    }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe10) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/015549as_20100120.caida");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe11) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/022153email-EuAll");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe12) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/020095p2p-Gnutella30");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe13) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/024982cit-HepTh");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe14) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/030935soc-Epinions1");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe15) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/032233cit-HepPh");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe16) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/045425soc-Slashdot0811");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe17) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/050219soc-sign-epinions");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe18) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/004950ca-HepPh");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+  }
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDiamAbgabe19) {
+
+	  auto Reader = SNAPGraphReader();
+	  Graph G = Reader.read("input_borassi/003702ca-HepTh");
+	  Diameter diam(G,1);
+	  diam.run();
+	  auto val = diam.getDiameter();
+	  auto value = val.first;
+
+	  INFO("Diameter: ", value);
+  }
+*/
+
+
+  TEST_F(HyperbolicityGTest, testHyperbolicityDistCheck1) {
+
+	auto Reader = SNAPGraphReader();
+	Graph G = Reader.read("input_borassi/004527p2p-Gnutella08");
+	auto n = G.numberOfNodes();
+
+	int errorsGD=0;
+	double errorSumGD=0.0;
+	double relativeErrorGD=0.0;
+
+	int errorsT=0;
+	double errorSumT=0.0;
+	double relativeErrorT=0.0;
+
+	int errorsD=0;
+	double errorSumD=0.0;
+	double relativeErrorD=0.0;
 
 	CustomizedAPSP _apsp(G);
 	_apsp.run();
-	duration_apsp = (std::clock() - start) / (double) CLOCKS_PER_SEC;
-	INFO("Duration of CustomizedAPSP ", duration_apsp);
 
-	count largeDistance = 30;
+	CustomizedAPSP cAPSP(G, ceil(n*0.05), 20, CentralNodeMethod::GROUPDEGREE);
+	cAPSP.run();
+
+	CustomizedAPSP cAPSP2(G, ceil(n*0.05), 20, CentralNodeMethod::TOPCLOSENESS);
+	cAPSP2.run();
+
+	CustomizedAPSP cAPSP3(G, ceil(n*0.05), 20, CentralNodeMethod::DEGREE);
+	cAPSP3.run();
 
 	for(node u= 0; u < G.numberOfNodes(); ++u){
 		for(node v=u; v < G.numberOfNodes(); ++v){
-			if(_apsp.getDistance(u,v) != cAPSP.getDistance(u,v)){
-				errors++;
-				errorSum +=(cAPSP.getDistance(u,v) - _apsp.getDistance(u,v));
-				relativeError+= (cAPSP.getDistance(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			if(_apsp.getDistance(u,v) != cAPSP.distUpperBoundAdvanced(u,v)){
+				errorsGD++;
+				errorSumGD +=(cAPSP.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v));
+				relativeErrorGD+= (cAPSP.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
 
-				if(_apsp.getDistance(u,v) >= largeDistance){
-					errorsForLargeDistances++;
-					errorSumForLargeDistances +=(cAPSP.getDistance(u,v) - _apsp.getDistance(u,v));
-					relativeErrorForLargeDistances+= (cAPSP.getDistance(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
-				}
+			if(_apsp.getDistance(u,v) != cAPSP2.distUpperBoundAdvanced(u,v)){
+				errorsT++;
+				errorSumT +=(cAPSP2.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v));
+				relativeErrorT+= (cAPSP2.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP3.distUpperBoundAdvanced(u,v)){
+				errorsD++;
+				errorSumD +=(cAPSP3.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v));
+				relativeErrorD+= (cAPSP3.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
 			}
 		}
 	}
 
-	INFO("Errors:", errors);
-	INFO("Error Average:", errorSum/errors);
-	INFO("Relative Error Average: ", relativeError/errors);
-	INFO("Errors (large Distance):", errorsForLargeDistances);
-	INFO("Error Average (large Distance):", errorSumForLargeDistances/errorsForLargeDistances);
-	INFO("Relative Error Average (large Distance): ", relativeErrorForLargeDistances/errorsForLargeDistances);
+	INFO("Relative Error Average (Group Degree 10%): ", relativeErrorGD/(double)errorsGD);
+	INFO("Relative Error Average (TOPCLOSENESS 10%): ", relativeErrorT/(double) errorsT);
+	INFO("Relative Error Average (Degree 10%): ", relativeErrorD/ (double) errorsD);
 
   }
 
-//  TEST_F(HyperbolicityGTest, testAKIBA) {
-////	  auto Reader = SNAPGraphReader();
-////	  Graph G = Reader.read("input_borassi/045425soc-Slashdot0811");
-//	  PrunedLandmarkLabeling<> pll;
-//	  pll.ConstructIndex(samples/graph_example.tsv);
-//	  cout << pll.QueryDistance(1, 4) << endl;
-//  }
+TEST_F(HyperbolicityGTest, testHyperbolicityDistCheck2) {
+
+	auto Reader = SNAPGraphReader();
+	Graph G = Reader.read("input_borassi/013301p2p-Gnutella25");
+	auto n = G.numberOfNodes();
+
+	int errorsGD=0;
+	double errorSumGD=0.0;
+	double relativeErrorGD=0.0;
+
+	int errorsT=0;
+	double errorSumT=0.0;
+	double relativeErrorT=0.0;
+
+	int errorsD=0;
+	double errorSumD=0.0;
+	double relativeErrorD=0.0;
+
+	CustomizedAPSP _apsp(G);
+	_apsp.run();
+
+	CustomizedAPSP cAPSP(G, ceil(n*0.05), 20, CentralNodeMethod::GROUPDEGREE);
+	cAPSP.run();
+
+	CustomizedAPSP cAPSP2(G, ceil(n*0.05), 20, CentralNodeMethod::TOPCLOSENESS);
+	cAPSP2.run();
+
+	CustomizedAPSP cAPSP3(G, ceil(n*0.05), 20, CentralNodeMethod::DEGREE);
+	cAPSP3.run();
+
+	for(node u= 0; u < G.numberOfNodes(); ++u){
+		for(node v=u; v < G.numberOfNodes(); ++v){
+			if(_apsp.getDistance(u,v) != cAPSP.distUpperBoundAdvanced(u,v)){
+				errorsGD++;
+				errorSumGD +=(cAPSP.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v));
+				relativeErrorGD+= (cAPSP.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP2.distUpperBoundAdvanced(u,v)){
+				errorsT++;
+				errorSumT +=(cAPSP2.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v));
+				relativeErrorT+= (cAPSP2.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP3.distUpperBoundAdvanced(u,v)){
+				errorsD++;
+				errorSumD +=(cAPSP3.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v));
+				relativeErrorD+= (cAPSP3.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+		}
+	}
+
+	INFO("Relative Error Average (Group Degree 10%): ", relativeErrorGD/(double)errorsGD);
+	INFO("Relative Error Average (TOPCLOSENESS 10%): ", relativeErrorT/(double) errorsT);
+	INFO("Relative Error Average (Degree 10%): ", relativeErrorD/ (double) errorsD);
+
+ }
+
+TEST_F(HyperbolicityGTest, testHyperbolicityDistCheck3) {
+
+	auto Reader = SNAPGraphReader();
+	Graph G = Reader.read("input_borassi/010969email-Enron");
+	auto n = G.numberOfNodes();
+
+	int errorsGD=0;
+	double errorSumGD=0.0;
+	double relativeErrorGD=0.0;
+
+	int errorsT=0;
+	double errorSumT=0.0;
+	double relativeErrorT=0.0;
+
+	int errorsD=0;
+	double errorSumD=0.0;
+	double relativeErrorD=0.0;
+
+	CustomizedAPSP _apsp(G);
+	_apsp.run();
+
+	CustomizedAPSP cAPSP(G, ceil(n*0.05), 20, CentralNodeMethod::GROUPDEGREE);
+	cAPSP.run();
+
+	CustomizedAPSP cAPSP2(G, ceil(n*0.05), 20, CentralNodeMethod::TOPCLOSENESS);
+	cAPSP2.run();
+
+	CustomizedAPSP cAPSP3(G, ceil(n*0.05), 20, CentralNodeMethod::DEGREE);
+	cAPSP3.run();
+
+	for(node u= 0; u < G.numberOfNodes(); ++u){
+		for(node v=u; v < G.numberOfNodes(); ++v){
+			if(_apsp.getDistance(u,v) != cAPSP.distUpperBoundAdvanced(u,v)){
+				errorsGD++;
+				errorSumGD +=(cAPSP.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v));
+				relativeErrorGD+= (cAPSP.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP2.distUpperBoundAdvanced(u,v)){
+				errorsT++;
+				errorSumT +=(cAPSP2.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v));
+				relativeErrorT+= (cAPSP2.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP3.distUpperBoundAdvanced(u,v)){
+				errorsD++;
+				errorSumD +=(cAPSP3.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v));
+				relativeErrorD+= (cAPSP3.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+		}
+	}
+
+	INFO("Relative Error Average (Group Degree 10%): ", relativeErrorGD/(double)errorsGD);
+	INFO("Relative Error Average (TOPCLOSENESS 10%): ", relativeErrorT/(double) errorsT);
+	INFO("Relative Error Average (Degree 10%): ", relativeErrorD/ (double) errorsD);
+
+ }
+
+TEST_F(HyperbolicityGTest, testHyperbolicityDistCheck4) {
+
+	auto Reader = SNAPGraphReader();
+	Graph G = Reader.read("input_borassi/024982cit-HepTh");
+	auto n = G.numberOfNodes();
+
+	int errorsGD=0;
+	double errorSumGD=0.0;
+	double relativeErrorGD=0.0;
+
+	int errorsT=0;
+	double errorSumT=0.0;
+	double relativeErrorT=0.0;
+
+	int errorsD=0;
+	double errorSumD=0.0;
+	double relativeErrorD=0.0;
+
+	CustomizedAPSP _apsp(G);
+	_apsp.run();
+
+	CustomizedAPSP cAPSP(G, ceil(n*0.05), 20, CentralNodeMethod::GROUPDEGREE);
+	cAPSP.run();
+
+	CustomizedAPSP cAPSP2(G, ceil(n*0.05), 20, CentralNodeMethod::TOPCLOSENESS);
+	cAPSP2.run();
+
+	CustomizedAPSP cAPSP3(G, ceil(n*0.05), 20, CentralNodeMethod::DEGREE);
+	cAPSP3.run();
+
+	for(node u= 0; u < G.numberOfNodes(); ++u){
+		for(node v=u; v < G.numberOfNodes(); ++v){
+			if(_apsp.getDistance(u,v) != cAPSP.distUpperBoundAdvanced(u,v)){
+				errorsGD++;
+				errorSumGD +=(cAPSP.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v));
+				relativeErrorGD+= (cAPSP.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP2.distUpperBoundAdvanced(u,v)){
+				errorsT++;
+				errorSumT +=(cAPSP2.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v));
+				relativeErrorT+= (cAPSP2.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP3.distUpperBoundAdvanced(u,v)){
+				errorsD++;
+				errorSumD +=(cAPSP3.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v));
+				relativeErrorD+= (cAPSP3.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+		}
+	}
+
+	INFO("Relative Error Average (Group Degree 10%): ", relativeErrorGD/(double)errorsGD);
+	INFO("Relative Error Average (TOPCLOSENESS 10%): ", relativeErrorT/(double) errorsT);
+	INFO("Relative Error Average (Degree 10%): ", relativeErrorD/ (double) errorsD);
+
+ }
+
+TEST_F(HyperbolicityGTest, testHyperbolicityDistCheck5) {
+
+	auto Reader = SNAPGraphReader();
+	Graph G = Reader.read("input_borassi/032233cit-HepPh");
+	auto n = G.numberOfNodes();
+
+	int errorsGD=0;
+	double errorSumGD=0.0;
+	double relativeErrorGD=0.0;
+
+	int errorsT=0;
+	double errorSumT=0.0;
+	double relativeErrorT=0.0;
+
+	int errorsD=0;
+	double errorSumD=0.0;
+	double relativeErrorD=0.0;
+
+	CustomizedAPSP _apsp(G);
+	_apsp.run();
+
+	CustomizedAPSP cAPSP(G, ceil(n*0.05), 20, CentralNodeMethod::GROUPDEGREE);
+	cAPSP.run();
+
+	CustomizedAPSP cAPSP2(G, ceil(n*0.05), 20, CentralNodeMethod::TOPCLOSENESS);
+	cAPSP2.run();
+
+	CustomizedAPSP cAPSP3(G, ceil(n*0.05), 20, CentralNodeMethod::DEGREE);
+	cAPSP3.run();
+
+	for(node u= 0; u < G.numberOfNodes(); ++u){
+		for(node v=u; v < G.numberOfNodes(); ++v){
+			if(_apsp.getDistance(u,v) != cAPSP.distUpperBoundAdvanced(u,v)){
+				errorsGD++;
+				errorSumGD +=(cAPSP.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v));
+				relativeErrorGD+= (cAPSP.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP2.distUpperBoundAdvanced(u,v)){
+				errorsT++;
+				errorSumT +=(cAPSP2.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v));
+				relativeErrorT+= (cAPSP2.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP3.distUpperBoundAdvanced(u,v)){
+				errorsD++;
+				errorSumD +=(cAPSP3.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v));
+				relativeErrorD+= (cAPSP3.distUpperBoundAdvanced(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+		}
+	}
+
+	INFO("Relative Error Average (Group Degree 10%): ", relativeErrorGD/(double)errorsGD);
+	INFO("Relative Error Average (TOPCLOSENESS 10%): ", relativeErrorT/(double) errorsT);
+	INFO("Relative Error Average (Degree 10%): ", relativeErrorD/ (double) errorsD);
+
+ }
+
+
+TEST_F(HyperbolicityGTest, testHyperbolicityDistCheckU1) {
+
+	auto Reader = SNAPGraphReader();
+	Graph G = Reader.read("input_borassi/004527p2p-Gnutella08");
+	auto n = G.numberOfNodes();
+
+	int errorsGD=0;
+	double errorSumGD=0.0;
+	double relativeErrorGD=0.0;
+
+	int errorsT=0;
+	double errorSumT=0.0;
+	double relativeErrorT=0.0;
+
+	int errorsD=0;
+	double errorSumD=0.0;
+	double relativeErrorD=0.0;
+
+	CustomizedAPSP _apsp(G);
+	_apsp.run();
+
+	CustomizedAPSP cAPSP(G, 20, 20, CentralNodeMethod::GROUPDEGREE);
+	cAPSP.run();
+
+	CustomizedAPSP cAPSP2(G, 20, 20, CentralNodeMethod::TOPCLOSENESS);
+	cAPSP2.run();
+
+	CustomizedAPSP cAPSP3(G, 20, 20, CentralNodeMethod::DEGREE);
+	cAPSP3.run();
+
+	for(node u= 0; u < G.numberOfNodes(); ++u){
+		for(node v=u; v < G.numberOfNodes(); ++v){
+			if(_apsp.getDistance(u,v) != cAPSP.distUpperBoundByComp(u,v)){
+				errorsGD++;
+				errorSumGD +=(cAPSP.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v));
+				relativeErrorGD+= (cAPSP.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP2.distUpperBoundByComp(u,v)){
+				errorsT++;
+				errorSumT +=(cAPSP2.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v));
+				relativeErrorT+= (cAPSP2.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP3.distUpperBoundByComp(u,v)){
+				errorsD++;
+				errorSumD +=(cAPSP3.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v));
+				relativeErrorD+= (cAPSP3.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+		}
+	}
+
+	INFO("Relative Error Average (Group Degree 10%): ", relativeErrorGD/(double)errorsGD);
+	INFO("Relative Error Average (TOPCLOSENESS 10%): ", relativeErrorT/(double) errorsT);
+	INFO("Relative Error Average (Degree 10%): ", relativeErrorD/ (double) errorsD);
+
+ }
+
+TEST_F(HyperbolicityGTest, testHyperbolicityDistCheckU2) {
+
+	auto Reader = SNAPGraphReader();
+	Graph G = Reader.read("input_borassi/013301p2p-Gnutella25");
+	auto n = G.numberOfNodes();
+
+	int errorsGD=0;
+	double errorSumGD=0.0;
+	double relativeErrorGD=0.0;
+
+	int errorsT=0;
+	double errorSumT=0.0;
+	double relativeErrorT=0.0;
+
+	int errorsD=0;
+	double errorSumD=0.0;
+	double relativeErrorD=0.0;
+
+	CustomizedAPSP _apsp(G);
+	_apsp.run();
+
+	CustomizedAPSP cAPSP(G, 20, 20, CentralNodeMethod::GROUPDEGREE);
+	cAPSP.run();
+
+	CustomizedAPSP cAPSP2(G, 20, 20, CentralNodeMethod::TOPCLOSENESS);
+	cAPSP2.run();
+
+	CustomizedAPSP cAPSP3(G, 20, 20, CentralNodeMethod::DEGREE);
+	cAPSP3.run();
+
+	for(node u= 0; u < G.numberOfNodes(); ++u){
+		for(node v=u; v < G.numberOfNodes(); ++v){
+			if(_apsp.getDistance(u,v) != cAPSP.distUpperBoundByComp(u,v)){
+				errorsGD++;
+				errorSumGD +=(cAPSP.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v));
+				relativeErrorGD+= (cAPSP.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP2.distUpperBoundByComp(u,v)){
+				errorsT++;
+				errorSumT +=(cAPSP2.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v));
+				relativeErrorT+= (cAPSP2.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP3.distUpperBoundByComp(u,v)){
+				errorsD++;
+				errorSumD +=(cAPSP3.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v));
+				relativeErrorD+= (cAPSP3.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+		}
+	}
+
+	INFO("Relative Error Average (Group Degree 10%): ", relativeErrorGD/(double)errorsGD);
+	INFO("Relative Error Average (TOPCLOSENESS 10%): ", relativeErrorT/(double) errorsT);
+	INFO("Relative Error Average (Degree 10%): ", relativeErrorD/ (double) errorsD);
+
+ }
+
+TEST_F(HyperbolicityGTest, testHyperbolicityDistCheckU3) {
+
+	auto Reader = SNAPGraphReader();
+	Graph G = Reader.read("input_borassi/010969email-Enron");
+	auto n = G.numberOfNodes();
+
+	int errorsGD=0;
+	double errorSumGD=0.0;
+	double relativeErrorGD=0.0;
+
+	int errorsT=0;
+	double errorSumT=0.0;
+	double relativeErrorT=0.0;
+
+	int errorsD=0;
+	double errorSumD=0.0;
+	double relativeErrorD=0.0;
+
+	CustomizedAPSP _apsp(G);
+	_apsp.run();
+
+	CustomizedAPSP cAPSP(G, 20, 20, CentralNodeMethod::GROUPDEGREE);
+	cAPSP.run();
+
+	CustomizedAPSP cAPSP2(G, 20, 20, CentralNodeMethod::TOPCLOSENESS);
+	cAPSP2.run();
+
+	CustomizedAPSP cAPSP3(G, 20, 20, CentralNodeMethod::DEGREE);
+	cAPSP3.run();
+
+	for(node u= 0; u < G.numberOfNodes(); ++u){
+		for(node v=u; v < G.numberOfNodes(); ++v){
+			if(_apsp.getDistance(u,v) != cAPSP.distUpperBoundByComp(u,v)){
+				errorsGD++;
+				errorSumGD +=(cAPSP.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v));
+				relativeErrorGD+= (cAPSP.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP2.distUpperBoundByComp(u,v)){
+				errorsT++;
+				errorSumT +=(cAPSP2.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v));
+				relativeErrorT+= (cAPSP2.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP3.distUpperBoundByComp(u,v)){
+				errorsD++;
+				errorSumD +=(cAPSP3.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v));
+				relativeErrorD+= (cAPSP3.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+		}
+	}
+
+	INFO("Relative Error Average (Group Degree 10%): ", relativeErrorGD/(double)errorsGD);
+	INFO("Relative Error Average (TOPCLOSENESS 10%): ", relativeErrorT/(double) errorsT);
+	INFO("Relative Error Average (Degree 10%): ", relativeErrorD/ (double) errorsD);
+
+ }
+
+TEST_F(HyperbolicityGTest, testHyperbolicityDistCheckU4) {
+
+	auto Reader = SNAPGraphReader();
+	Graph G = Reader.read("input_borassi/024982cit-HepTh");
+	auto n = G.numberOfNodes();
+
+	int errorsGD=0;
+	double errorSumGD=0.0;
+	double relativeErrorGD=0.0;
+
+	int errorsT=0;
+	double errorSumT=0.0;
+	double relativeErrorT=0.0;
+
+	int errorsD=0;
+	double errorSumD=0.0;
+	double relativeErrorD=0.0;
+
+	CustomizedAPSP _apsp(G);
+	_apsp.run();
+
+	CustomizedAPSP cAPSP(G, 20, 20, CentralNodeMethod::GROUPDEGREE);
+	cAPSP.run();
+
+	CustomizedAPSP cAPSP2(G, 20, 20, CentralNodeMethod::TOPCLOSENESS);
+	cAPSP2.run();
+
+	CustomizedAPSP cAPSP3(G, 20, 20, CentralNodeMethod::DEGREE);
+	cAPSP3.run();
+
+	for(node u= 0; u < G.numberOfNodes(); ++u){
+		for(node v=u; v < G.numberOfNodes(); ++v){
+			if(_apsp.getDistance(u,v) != cAPSP.distUpperBoundByComp(u,v)){
+				errorsGD++;
+				errorSumGD +=(cAPSP.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v));
+				relativeErrorGD+= (cAPSP.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP2.distUpperBoundByComp(u,v)){
+				errorsT++;
+				errorSumT +=(cAPSP2.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v));
+				relativeErrorT+= (cAPSP2.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP3.distUpperBoundByComp(u,v)){
+				errorsD++;
+				errorSumD +=(cAPSP3.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v));
+				relativeErrorD+= (cAPSP3.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+		}
+	}
+
+	INFO("Relative Error Average (Group Degree 10%): ", relativeErrorGD/(double)errorsGD);
+	INFO("Relative Error Average (TOPCLOSENESS 10%): ", relativeErrorT/(double) errorsT);
+	INFO("Relative Error Average (Degree 10%): ", relativeErrorD/ (double) errorsD);
+
+ }
+
+TEST_F(HyperbolicityGTest, testHyperbolicityDistCheckU5) {
+
+	auto Reader = SNAPGraphReader();
+	Graph G = Reader.read("input_borassi/032233cit-HepPh");
+	auto n = G.numberOfNodes();
+
+	int errorsGD=0;
+	double errorSumGD=0.0;
+	double relativeErrorGD=0.0;
+
+	int errorsT=0;
+	double errorSumT=0.0;
+	double relativeErrorT=0.0;
+
+	int errorsD=0;
+	double errorSumD=0.0;
+	double relativeErrorD=0.0;
+
+	CustomizedAPSP _apsp(G);
+	_apsp.run();
+
+	CustomizedAPSP cAPSP(G, 20, 20, CentralNodeMethod::GROUPDEGREE);
+	cAPSP.run();
+
+	CustomizedAPSP cAPSP2(G, 20, 20, CentralNodeMethod::TOPCLOSENESS);
+	cAPSP2.run();
+
+	CustomizedAPSP cAPSP3(G, 20, 20, CentralNodeMethod::DEGREE);
+	cAPSP3.run();
+
+	for(node u= 0; u < G.numberOfNodes(); ++u){
+		for(node v=u; v < G.numberOfNodes(); ++v){
+			if(_apsp.getDistance(u,v) != cAPSP.distUpperBoundByComp(u,v)){
+				errorsGD++;
+				errorSumGD +=(cAPSP.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v));
+				relativeErrorGD+= (cAPSP.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP2.distUpperBoundByComp(u,v)){
+				errorsT++;
+				errorSumT +=(cAPSP2.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v));
+				relativeErrorT+= (cAPSP2.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+
+			if(_apsp.getDistance(u,v) != cAPSP3.distUpperBoundByComp(u,v)){
+				errorsD++;
+				errorSumD +=(cAPSP3.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v));
+				relativeErrorD+= (cAPSP3.distUpperBoundByComp(u,v) - _apsp.getDistance(u,v))/_apsp.getDistance(u,v);
+			}
+		}
+	}
+
+	INFO("Relative Error Average (Group Degree 10%): ", relativeErrorGD/(double)errorsGD);
+	INFO("Relative Error Average (TOPCLOSENESS 10%): ", relativeErrorT/(double) errorsT);
+	INFO("Relative Error Average (Degree 10%): ", relativeErrorD/ (double) errorsD);
+
+ }
+
+
 
   TEST_F(HyperbolicityGTest, testHyperbolicity2) {
     
