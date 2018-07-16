@@ -29,10 +29,6 @@ void APSP::run() {
 			BFS bfs(G, u, true, true);
 			bfs.run();
 			distances[u] = bfs.getDistances();
-			
-			auto sorted_nodes = bfs.getNodesSortedByDistance();
-			auto const& eccentricity_node = sorted_nodes.back();
-			eccentricity[u] = distances[u][eccentricity_node];
 		});
 	}
 	hasRun = true;
