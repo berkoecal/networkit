@@ -508,7 +508,12 @@ void Hyperbolicity::HYP_AKIBA(){
 	hyperbolicity_value = h_diff/2;
 }
 
-
+/*
+ * This method implements the usual algorithm hyp of Borassi et al.
+ * Note that acceptable and valuable nodes are computed differently than in the method hyp_borassi
+ * as well as in the original implementation of Borassi et al.
+ * It can easily be copied and adapted. Here, I wanted to know if this approach is faster.
+ */
 
 void Hyperbolicity::HYP(){
 	auto get_wall_time = []()->double{
@@ -580,11 +585,7 @@ void Hyperbolicity::HYP(){
 	/************************************************************************************/
 
 
-	//Note: farness_comp causes additional time overhead in the tuple construction phase
-	//		since it conducts additional comparisons if distances are the same.
-	//auto ordered_tuples = std::set<NodeTupleWithDist, decltype(lex_comp)>(lex_comp);
 	std::vector<NodeTupleWithDist> ordered_tuples;
-	//std::vector<NodeTupleWithDist> ordered_tuples;
 
 	//Tuple construction
 	double startTuples = get_wall_time();
@@ -597,8 +598,6 @@ void Hyperbolicity::HYP(){
 		}
 	}
 	std::sort(ordered_tuples.begin(), ordered_tuples.end(), lex_comp);
-
-	//std::sort(ordered_tuples.begin(), ordered_tuples.end(), farness_comp);
 
 	double endTuples = get_wall_time();
 	INFO("Time of Tuple Construction: ", endTuples-startTuples);
@@ -615,12 +614,6 @@ void Hyperbolicity::HYP(){
 	double end_c = get_wall_time();
 	INFO("Time of Central Node Computation (TopCloseness): ", end_c - start_c);
 
-	//central node via usual algorithm
-//	double start_c = get_wall_time();
-//	node central_node = centralNode(distances);
-//	double end_c = get_wall_time();
-//	INFO("Time of Central Node Computation (Naive): ", end_c - start_c);
-
 
 //------------------------------------------MAIN PART ----------------------------------------------------
 
@@ -631,7 +624,8 @@ void Hyperbolicity::HYP(){
 	std::vector<edgeweight> largestDistToMates(G.upperNodeIdBound());
 
 	double startMAIN = get_wall_time();
-
+	
+	// Data for analysis
 	size_t iteration = 0;
 	node best_x=0;
 	node best_y=0;
