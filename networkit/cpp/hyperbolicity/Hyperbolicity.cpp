@@ -71,7 +71,10 @@ void Hyperbolicity::run(){
 	}
 }
 
-
+/*
+	This method implements the new approach.
+*/
+	
 void Hyperbolicity::HYP_AKIBA(){
 
 	auto get_wall_time = []()->double{
