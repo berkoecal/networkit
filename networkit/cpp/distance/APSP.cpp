@@ -17,7 +17,6 @@ APSP::APSP(const Graph& G) : Algorithm(), G(G) {}
 void APSP::run() {
 	std::vector<edgeweight> distanceVector(G.upperNodeIdBound(), 0.0);
 	distances.resize(G.upperNodeIdBound(), distanceVector);
-	eccentricity.resize(G.upperNodeIdBound(),0.0);
 	if (G.isWeighted()) {
 		G.parallelForNodes([&](node u){
 			Dijkstra dijk(G, u);
