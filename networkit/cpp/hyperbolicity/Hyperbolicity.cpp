@@ -15,6 +15,7 @@
 #include "Hyperbolicity.h"
 #include "../distance/APSP.h"
 #include "../components/ConnectedComponents.h"
+#include "../components/BiconnectedComponents.h"
 #include "../auxiliary/Log.h"
 #include <valgrind/callgrind.h>
 #include "SymmetricMatrix.h"
@@ -61,10 +62,14 @@ void Hyperbolicity::run(){
 	}else{
 		ConnectedComponents cc(G);
 		cc.run();
+		BiconnectedComponents bcc(G);
+		bcc.run();
 		/*
-		 * We (temporarily) assume the graph to be connected
+		 * We assume the graph to be connected.
 		 */
+		//this condition is not necessary if biconnected components is already tested.
 		if(cc.numberOfComponents() > 1){throw std::runtime_error("Graph is not connected");}
+		if(bcc.numberOfComponents() > 1){throw std::runtime_error("Graph is not biconnected");}
 		HYP_AKIBA();
 		//INFO("---------------------------------------");
 		hasRun = true;
