@@ -517,7 +517,8 @@ void Hyperbolicity::HYP_AKIBA(){
  * This method implements the usual algorithm hyp of Borassi et al.
  * Note that acceptable and valuable nodes are computed differently than in the method hyp_borassi
  * as well as in the original implementation of Borassi et al.
- * It can easily be copied and adapted. Here, I wanted to know if this approach is faster.
+ * It can be easily copied and adapted from method HYP_AKIBA(). 
+ * Here, I wanted to know if this approach is faster.
  */
 
 void Hyperbolicity::HYP(){
